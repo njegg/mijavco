@@ -1,2 +1,2 @@
-# mijavac
+# mijavco
 mijavac - Micro Java Compiler
