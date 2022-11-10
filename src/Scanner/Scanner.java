@@ -16,7 +16,6 @@ public class Scanner {
     public  static int    col;
     public  static int    line;
     public  static int    error_count = 0;
-    public  static int    token_count = 0;
 
     public static void init() throws IOException {
         col = 0;
@@ -63,8 +62,6 @@ public class Scanner {
         Token token = new Token();
         token.column = col;
         token.line = line;
-        token_count++;
-        token.pos = token_count;
 
         if (Character.isLetter(ch) || ch == '_') {
             readIdent(token);

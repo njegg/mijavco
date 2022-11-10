@@ -4,10 +4,8 @@ public class Token {
     public TokenCode    code;
     public int          line;
     public int          column;
-    public int          pos;
-
-    public int      value;		// for numbers and characters
-    public String   text;	    // for names
+    public int          value;		// for numbers and characters
+    public String       text;	    // for names
 
     @Override
     public String toString() {
