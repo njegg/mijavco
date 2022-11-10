@@ -1,0 +1,17 @@
+program P
+{
+	void main()
+		int i;
+	{
+		i = 0;
+		while (i < 5) {
+			print(i);
+			i = i + 1;
+			i++;
+		}
+
+		// commmmment
+
+		int _asd_asd = 000090;
+	}
+}
