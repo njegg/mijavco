@@ -4,18 +4,19 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class Scanner {
     private static final char EOL = '\n';
     private static final char EOF = (char) -1;
 
-    private static HashMap<String, TokenCode> reservedNamesCodes;
+    private static HashMap<String, TokenKind> reservedNamesCodes;
     private static Reader in;
     private static char   ch;
-    public  static int    col;
-    public  static int    line;
-    public  static int    error_count = 0;
+    private static int    col;
+    private static int    line;
+    private static int    error_count = 0;
 
     public static void init() throws IOException {
         col = 0;
@@ -25,19 +26,23 @@ public class Scanner {
 
         reservedNamesCodes = new HashMap<>();
 
-        String[] reservedNames = {
-            "break", "class", "else", "final", "if", "new",
-            "print", "program", "read", "return", "void", "while"
-        };
+//        String[] reservedNames = {
+//            "break", "class", "else", "const", "if", "new",
+//            "print", "program", "read", "return", "void", "while"
+//        };
+
+        String[] reservedNames = Arrays.stream(TokenKind.values())
+                .map(k -> k.name().toLowerCase())
+                .toArray(String[]::new);
 
         for (String name : reservedNames) {
-            reservedNamesCodes.put(name, TokenCode.valueOf(name.toUpperCase()));
+            reservedNamesCodes.put(name, TokenKind.valueOf(name.toUpperCase()));
         }
     }
 
-    private static void error(String msg) {
+    private static void error(String message) {
         System.err.printf("\nline: %-4d col: %-4d: ", line, col);
-        System.err.println(msg);
+        System.err.println(message);
         error_count++;
     }
 
@@ -83,8 +88,7 @@ public class Scanner {
         }
 
         token.text = stringBuilder.toString();
-
-        token.code = reservedNamesCodes.getOrDefault(token.text, TokenCode.IDENT);
+        token.kind = reservedNamesCodes.getOrDefault(token.text, TokenKind.IDENT);
     }
 
     private static void readNumber(Token token) {
@@ -94,124 +98,124 @@ public class Scanner {
             nextChar();
         }
 
-        token.code = TokenCode.NUMBER;
+        token.kind = TokenKind.NUMBER;
     }
 
     private static void readRest(Token token) {
         switch (ch) {
-            case ';': token.code = TokenCode.SEMICOLON; nextChar(); break;
-            case '.': token.code = TokenCode.PERIOD;    nextChar(); break;
-            case ',': token.code = TokenCode.COMMA;     nextChar(); break;
-            case ')': token.code = TokenCode.RPAREN;    nextChar(); break;
-            case '(': token.code = TokenCode.LPAREN;    nextChar(); break;
-            case '[': token.code = TokenCode.LBRACK;    nextChar(); break;
-            case ']': token.code = TokenCode.RBRACK;    nextChar(); break;
-            case '{': token.code = TokenCode.LBRACE;    nextChar(); break;
-            case '}': token.code = TokenCode.RBRACE;    nextChar(); break;
-            case '*': token.code = TokenCode.ASTERISK;  nextChar(); break;
-            case '%': token.code = TokenCode.MOD;       nextChar(); break;
+            case ';': token.kind = TokenKind.SEMICOLON; nextChar(); break;
+            case '.': token.kind = TokenKind.PERIOD;    nextChar(); break;
+            case ',': token.kind = TokenKind.COMMA;     nextChar(); break;
+            case ')': token.kind = TokenKind.RPAREN;    nextChar(); break;
+            case '(': token.kind = TokenKind.LPAREN;    nextChar(); break;
+            case '[': token.kind = TokenKind.LBRACK;    nextChar(); break;
+            case ']': token.kind = TokenKind.RBRACK;    nextChar(); break;
+            case '{': token.kind = TokenKind.LBRACE;    nextChar(); break;
+            case '}': token.kind = TokenKind.RBRACE;    nextChar(); break;
+            case '*': token.kind = TokenKind.ASTERISK;  nextChar(); break;
+            case '%': token.kind = TokenKind.MOD;       nextChar(); break;
 
             case '/':
                 nextChar();
                 if (ch == '/') {
                     while (ch != EOL) nextChar();
-                    token.code = TokenCode.NONE;
+                    token.kind = TokenKind.ERROR;
                     nextChar();
                 } else {
-                    token.code = TokenCode.SLASH;
+                    token.kind = TokenKind.SLASH;
                 }
                 break;
 
             case '=':
                 nextChar();
                 if (ch == '=') {
-                    token.code = TokenCode.EQ;
+                    token.kind = TokenKind.EQ;
                     nextChar();
                 } else {
-                    token.code = TokenCode.ASSIGN;
+                    token.kind = TokenKind.ASSIGN;
                 }
                 break;
 
             case '+':
                 nextChar();
                 if (ch == '+') {
-                    token.code = TokenCode.INC;
+                    token.kind = TokenKind.INC;
                     nextChar();
                 } else {
-                    token.code = TokenCode.PLUS;
+                    token.kind = TokenKind.PLUS;
                 }
                 break;
 
             case '-':
                 nextChar();
                 if (ch == '-') {
-                    token.code = TokenCode.DEC;
+                    token.kind = TokenKind.DEC;
                     nextChar();
                 } else {
-                    token.code = TokenCode.MINUS;
+                    token.kind = TokenKind.MINUS;
                 }
                 break;
 
             case '>':
                 nextChar();
                 if (ch == '=') {
-                    token.code = TokenCode.GEQ;
+                    token.kind = TokenKind.GEQ;
                     nextChar();
                 } else {
-                    token.code = TokenCode.GRE;
+                    token.kind = TokenKind.GRE;
                 }
                 break;
 
             case '<':
                 nextChar();
                 if (ch == '=') {
-                    token.code = TokenCode.LEQ;
+                    token.kind = TokenKind.LEQ;
                     nextChar();
                 } else {
-                    token.code = TokenCode.LES;
+                    token.kind = TokenKind.LES;
                 }
                 break;
 
             case '!':
                 nextChar();
                 if (ch == '=') {
-                    token.code = TokenCode.NEQ;
+                    token.kind = TokenKind.NEQ;
                     nextChar();
                 } else {
                     error("'=' expected after '!'");
-                    token.code = TokenCode.NONE;
+                    token.kind = TokenKind.ERROR;
                 }
                 break;
 
             case '|':
                 nextChar();
                 if (ch == '|') {
-                    token.code = TokenCode.OR;
+                    token.kind = TokenKind.OR;
                     nextChar();
                 } else {
                     error("Another '|' expected");
-                    token.code = TokenCode.NONE;
+                    token.kind = TokenKind.ERROR;
                 }
                 break;
 
             case '&':
                 nextChar();
                 if (ch == '&') {
-                    token.code = TokenCode.AND;
+                    token.kind = TokenKind.AND;
                     nextChar();
                 } else {
                     error("Another '&' expected");
-                    token.code = TokenCode.NONE;
+                    token.kind = TokenKind.ERROR;
                 }
                 break;
 
             case EOF:
-                token.code = TokenCode.EOF;
+                token.kind = TokenKind.EOF;
                 break;
 
             default:
                 error("Unexpected character '" + ch + "'");
-                token.code = TokenCode.NONE;
+                token.kind = TokenKind.ERROR;
                 nextChar();
         }
     }

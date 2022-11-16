@@ -1,7 +1,7 @@
 package Scanner;
 
-public enum TokenCode {
-    NONE,
+public enum TokenKind {
+    ERROR,
     IDENT,
     NUMBER,
     CHARACTER,
@@ -33,7 +33,7 @@ public enum TokenCode {
     BREAK,
     CLASS,
     ELSE,
-    FINAL,
+    CONST,
     IF,
     NEW,
     PRINT,

@@ -1,17 +1,8 @@
 program P
+    int i, j, k;
+    int a;
+    String s;
+    const int PI = 3;
 {
-	void main()
-		int i;
-	{
-		i = 0;
-		while (i < 5) {
-			print(i);
-			i = i + 1;
-			i++;
-		}
 
-		// commmmment
-
-		int _asd_asd = 000090;
-	}
 }

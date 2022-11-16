@@ -1,7 +1,7 @@
 package Scanner;
 
 public class Token {
-    public TokenCode    code;
+    public TokenKind    kind;
     public int          line;
     public int          column;
     public int          value;		// for numbers and characters
@@ -12,10 +12,10 @@ public class Token {
         String s = String.format("line: %-4d col: %-4d\t%10s\t",
                 line,
                 column,
-                code
+                kind
         );
 
-        switch (code) {
+        switch (kind) {
             case NUMBER: s += value; break;
             case IDENT:  s += text;                 break;
             default:
