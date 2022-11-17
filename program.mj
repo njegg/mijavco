@@ -1,14 +1,21 @@
 program P
-    int a;
-    const int PI = 3;
-    char c = ''';
-    char c = '\a';
-    char e = 'asd';
-    char d = '\''
-    char d = '\\'
 {
+    int main()
+        int i;
+    {
+        i = 0;
+        i = i + 1;
+        return i;
+    }
 
+    void pog(int a) {
+
+    }
+
+    int epik (int asd, char aa, asd asd)
+        pog pog, pog;
+    {
+        epik = 2 + 33;
+        m m = 2 * 3 + aa;
+    }
 }
-
-
-// comment

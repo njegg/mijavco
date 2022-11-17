@@ -1,0 +1,14 @@
+program P
+    int a;
+    const int PI = 3;
+    char c = ''';
+    char c = '\a';
+    char e = 'asd';
+    char d = '\''
+    char d = '\t'
+{
+
+}
+
+
+// comment

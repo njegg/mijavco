@@ -6,6 +6,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import static Scanner.TokenKind.*;
 
 public class Scanner {
@@ -13,6 +18,7 @@ public class Scanner {
     private static final char EOFCHAR = (char) -1;
 
     private static HashMap<String, TokenKind> reservedNamesCodes;
+    private static HashSet<Character> escapedCharacters;
     private static Reader in;
     private static char   ch;
     private static int    col;
@@ -25,9 +31,13 @@ public class Scanner {
         in = new InputStreamReader(new FileInputStream("program.mj"));
         nextChar();
 
+        escapedCharacters = Stream
+                .of('n', '\\', '\'', '\"', 't')
+                .collect(Collectors.toCollection(HashSet::new));
+
         reservedNamesCodes = new HashMap<>();
 
-        /* Convert all TokenKind's to a array of lowercase strings */
+        /* Convert all TokenKind's to array of lowercase strings */
         String[] reservedNames = Arrays.stream(TokenKind.values())
                 .map(k -> k.name().toLowerCase())
                 .toArray(String[]::new);
@@ -71,6 +81,8 @@ public class Scanner {
             readNumber(token);
         } else if (ch == '\'') {
             readCharacter(token);
+        } else if (ch == '\"') {
+            readString(token);
         } else {
             readRest(token);
         }
@@ -104,11 +116,15 @@ public class Scanner {
         token.kind = CHARACTER;
         nextChar();
 
+        boolean escaped = false;
+
         /* Escaped character */
-        /* TODO: Better if maybe */
         if (ch == '\\') {
             nextChar();
-            if (ch != '\\' && ch != '\'' && ch != '\"') {
+            escaped = true;
+
+            // TODO:
+            if (!escapedCharacters.contains(ch)) {
                 error("Illegal escape character '\\" + ch + '\'');
                 token.kind = ERROR;
             }
@@ -119,8 +135,11 @@ public class Scanner {
             }
         }
 
-        if (token.kind != ERROR) {
-            token.value = ch;
+        token.value = ch;
+        /* Change the value for special cases */
+        if (escaped) {
+            if      (ch == 'n') token.value = '\n';
+            else if (ch == 't') token.value = '\t';
         }
 
         nextChar();
@@ -147,6 +166,10 @@ public class Scanner {
 
         /* Closed properly */
         nextChar();
+    }
+
+    private static void readString(Token token) {
+
     }
 
     private static void readRest(Token token) {

@@ -15,7 +15,7 @@ public class Main {
         }
     }
     public static void main(String[] args) throws IOException {
-        testScanner();
+        testParser();
     }
 
     private static void testScanner() {
