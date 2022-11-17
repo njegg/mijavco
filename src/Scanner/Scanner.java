@@ -6,10 +6,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Arrays;
 import java.util.HashMap;
+import static Scanner.TokenKind.*;
 
 public class Scanner {
-    private static final char EOL = '\n';
-    private static final char EOF = (char) -1;
+    private static final char EOLCHAR = '\n';
+    private static final char EOFCHAR = (char) -1;
 
     private static HashMap<String, TokenKind> reservedNamesCodes;
     private static Reader in;
@@ -26,11 +27,7 @@ public class Scanner {
 
         reservedNamesCodes = new HashMap<>();
 
-//        String[] reservedNames = {
-//            "break", "class", "else", "const", "if", "new",
-//            "print", "program", "read", "return", "void", "while"
-//        };
-
+        /* Convert all TokenKind's to a array of lowercase strings */
         String[] reservedNames = Arrays.stream(TokenKind.values())
                 .map(k -> k.name().toLowerCase())
                 .toArray(String[]::new);
@@ -50,7 +47,7 @@ public class Scanner {
         try {
             ch = (char) in.read();
 
-            if (ch == EOL) {
+            if (ch == EOLCHAR) {
                 col = 0;
                 line++;
             } else {
@@ -72,6 +69,8 @@ public class Scanner {
             readIdent(token);
         } else if (Character.isDigit(ch)) {
             readNumber(token);
+        } else if (ch == '\'') {
+            readCharacter(token);
         } else {
             readRest(token);
         }
@@ -88,7 +87,7 @@ public class Scanner {
         }
 
         token.text = stringBuilder.toString();
-        token.kind = reservedNamesCodes.getOrDefault(token.text, TokenKind.IDENT);
+        token.kind = reservedNamesCodes.getOrDefault(token.text, IDENT);
     }
 
     private static void readNumber(Token token) {
@@ -98,124 +97,180 @@ public class Scanner {
             nextChar();
         }
 
-        token.kind = TokenKind.NUMBER;
+        token.kind = NUMBER;
+    }
+
+    private static void readCharacter(Token token) {
+        token.kind = CHARACTER;
+        nextChar();
+
+        /* Escaped character */
+        /* TODO: Better if maybe */
+        if (ch == '\\') {
+            nextChar();
+            if (ch != '\\' && ch != '\'' && ch != '\"') {
+                error("Illegal escape character '\\" + ch + '\'');
+                token.kind = ERROR;
+            }
+        } else {
+            if (ch == '\'' || ch == '\"') {
+                token.kind = ERROR;
+                error("Characters ' and \" should be escaped");
+            }
+        }
+
+        if (token.kind != ERROR) {
+            token.value = ch;
+        }
+
+        nextChar();
+
+        /* Char literal not closed correctly */
+        if (ch != '\'') {
+            /* Find ending \', \n or EOF */
+            while (ch != '\'' && ch != EOLCHAR && ch != EOFCHAR) nextChar();
+
+            if (ch == '\'') {
+                token.kind = ERROR;
+                error("Character literal too long");
+                nextChar();
+            } else if (ch == EOFCHAR) {
+                token.kind = EOF;
+                error("Unexpected end of file, character literal not closed");
+            } else {
+                token.kind = ERROR;
+                error("Character literal not closed");
+            }
+
+            return;
+        }
+
+        /* Closed properly */
+        nextChar();
     }
 
     private static void readRest(Token token) {
+
         switch (ch) {
-            case ';': token.kind = TokenKind.SEMICOLON; nextChar(); break;
-            case '.': token.kind = TokenKind.PERIOD;    nextChar(); break;
-            case ',': token.kind = TokenKind.COMMA;     nextChar(); break;
-            case ')': token.kind = TokenKind.RPAREN;    nextChar(); break;
-            case '(': token.kind = TokenKind.LPAREN;    nextChar(); break;
-            case '[': token.kind = TokenKind.LBRACK;    nextChar(); break;
-            case ']': token.kind = TokenKind.RBRACK;    nextChar(); break;
-            case '{': token.kind = TokenKind.LBRACE;    nextChar(); break;
-            case '}': token.kind = TokenKind.RBRACE;    nextChar(); break;
-            case '*': token.kind = TokenKind.ASTERISK;  nextChar(); break;
-            case '%': token.kind = TokenKind.MOD;       nextChar(); break;
+            case ';': token.kind = SEMICOLON; nextChar(); break;
+            case '.': token.kind = PERIOD;    nextChar(); break;
+            case ',': token.kind = COMMA;     nextChar(); break;
+            case ')': token.kind = RPAREN;    nextChar(); break;
+            case '(': token.kind = LPAREN;    nextChar(); break;
+            case '[': token.kind = LBRACK;    nextChar(); break;
+            case ']': token.kind = RBRACK;    nextChar(); break;
+            case '{': token.kind = LBRACE;    nextChar(); break;
+            case '}': token.kind = RBRACE;    nextChar(); break;
+            case '*': token.kind = ASTERISK;  nextChar(); break;
+            case '%': token.kind = MOD;       nextChar(); break;
 
             case '/':
                 nextChar();
                 if (ch == '/') {
-                    while (ch != EOL) nextChar();
-                    token.kind = TokenKind.ERROR;
-                    nextChar();
+                    while (ch != EOLCHAR && ch != EOFCHAR) nextChar();
+
+                    Token tokenAfterComment = nextToken();
+
+                    token.kind = tokenAfterComment.kind;
+                    token.line = tokenAfterComment.line;
+                    token.value = tokenAfterComment.value;
+                    token.text = tokenAfterComment.text;
+                    token.column = tokenAfterComment.column;
                 } else {
-                    token.kind = TokenKind.SLASH;
+                    token.kind = SLASH;
                 }
                 break;
 
             case '=':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = TokenKind.EQ;
+                    token.kind = EQ;
                     nextChar();
                 } else {
-                    token.kind = TokenKind.ASSIGN;
+                    token.kind = ASSIGN;
                 }
                 break;
 
             case '+':
                 nextChar();
                 if (ch == '+') {
-                    token.kind = TokenKind.INC;
+                    token.kind = INC;
                     nextChar();
                 } else {
-                    token.kind = TokenKind.PLUS;
+                    token.kind = PLUS;
                 }
                 break;
 
             case '-':
                 nextChar();
                 if (ch == '-') {
-                    token.kind = TokenKind.DEC;
+                    token.kind = DEC;
                     nextChar();
                 } else {
-                    token.kind = TokenKind.MINUS;
+                    token.kind = MINUS;
                 }
                 break;
 
             case '>':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = TokenKind.GEQ;
+                    token.kind = GEQ;
                     nextChar();
                 } else {
-                    token.kind = TokenKind.GRE;
+                    token.kind = GRE;
                 }
                 break;
 
             case '<':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = TokenKind.LEQ;
+                    token.kind = LEQ;
                     nextChar();
                 } else {
-                    token.kind = TokenKind.LES;
+                    token.kind = LES;
                 }
                 break;
 
             case '!':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = TokenKind.NEQ;
+                    token.kind = NEQ;
                     nextChar();
                 } else {
                     error("'=' expected after '!'");
-                    token.kind = TokenKind.ERROR;
+                    token.kind = ERROR;
                 }
                 break;
 
             case '|':
                 nextChar();
                 if (ch == '|') {
-                    token.kind = TokenKind.OR;
+                    token.kind = OR;
                     nextChar();
                 } else {
                     error("Another '|' expected");
-                    token.kind = TokenKind.ERROR;
+                    token.kind = ERROR;
                 }
                 break;
 
             case '&':
                 nextChar();
                 if (ch == '&') {
-                    token.kind = TokenKind.AND;
+                    token.kind = AND;
                     nextChar();
                 } else {
                     error("Another '&' expected");
-                    token.kind = TokenKind.ERROR;
+                    token.kind = ERROR;
                 }
                 break;
 
-            case EOF:
-                token.kind = TokenKind.EOF;
+            case EOFCHAR:
+                token.kind = EOF;
                 break;
 
             default:
                 error("Unexpected character '" + ch + "'");
-                token.kind = TokenKind.ERROR;
+                token.kind = ERROR;
                 nextChar();
         }
     }

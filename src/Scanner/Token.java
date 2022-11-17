@@ -16,8 +16,9 @@ public class Token {
         );
 
         switch (kind) {
-            case NUMBER: s += value; break;
-            case IDENT:  s += text;                 break;
+            case CHARACTER: s += (char) value;  break;
+            case NUMBER:    s += value;         break;
+            case IDENT:     s += text;          break;
             default:
         }
 
