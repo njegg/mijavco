@@ -4,9 +4,7 @@ import Scanner.Scanner;
 import Scanner.Token;
 import Scanner.TokenKind;
 
-import java.util.HashSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.EnumSet;
 
 import static Scanner.TokenKind.*;
 
@@ -17,11 +15,10 @@ public class Parser {
 
     private static int errors = 0;
 
-    private static HashSet<TokenKind> firstStatement;
+    private static EnumSet<TokenKind> firstStatement;
 
     public static void parse() {
-        firstStatement = Stream.of(IDENT, IF, WHILE, BREAK, RETURN, READ, PRINT, LBRACE, SEMICOLON)
-                .collect(Collectors.toCollection(HashSet::new));
+        firstStatement = EnumSet.of(IDENT, IF, WHILE, BREAK, RETURN, READ, PRINT, LBRACE, SEMICOLON);
 
         scan();
         mijava();
