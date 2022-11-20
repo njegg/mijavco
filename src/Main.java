@@ -4,6 +4,7 @@ import Scanner.Token;
 import Scanner.TokenKind;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 public class Main {
     static {

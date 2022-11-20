@@ -62,9 +62,10 @@ public class Parser {
         check(PROGRAM);
         check(IDENT);
 
-        while (kind == IDENT || kind == CONST) {
-            if (kind == IDENT) varDeclaration();
-            if (kind == CONST) constDeclaration();
+        while (kind == IDENT || kind == CONST || kind == CLASS) {
+            if      (kind == IDENT) varDeclaration();
+            else if (kind == CONST) constDeclaration();
+            else                    classDeclaration();
         }
 
         check(LBRACE);
@@ -96,6 +97,10 @@ public class Parser {
 
     private static void type() {
         check(IDENT);
+        if (kind == LBRACK) {
+            scan();
+            check(RBRACK);
+        }
     }
 
     /**
@@ -106,9 +111,9 @@ public class Parser {
         type();
         check(IDENT);
 
-        if (kind != ASSIGN) {
+        if (kind != ASSIGN)
             error("You forgot to initialize a constant");
-        }
+
         scan();
 
         check(NUMBER);
@@ -136,10 +141,10 @@ public class Parser {
                         check(SEMICOLON);
                         break;
 
-                    case LBRACE:
+                    case LPAREN:
                         scan();
-                        /* TODO */
-                        check(RBRACE);
+                        actualParameters();
+                        check(RPAREN);
                         check(SEMICOLON);
                         break;
 
@@ -158,17 +163,55 @@ public class Parser {
                 check(SEMICOLON);
                 break;
 
-            case LPAREN:
+            case LBRACE:
                 block();
                 break;
 
-            /* TODO: if, while, read, print */
+            case IF:
+                scan();
+                check(LPAREN);
+                condition();
+                check(RPAREN);
+                statement();
+                if (kind == ELSE) {
+                    scan();
+                    statement();
+                }
+                break;
+
+            case WHILE:
+                scan();
+                check(LPAREN);
+                condition();
+                check(RPAREN);
+                statement();
+                break;
+
+            case READ:
+                scan();
+                check(LPAREN);
+                designator();
+                check(RPAREN);
+                check(SEMICOLON);
+                break;
+
+            case PRINT:
+                scan();
+                check(LPAREN);
+                expression();
+                while (kind == COMMA) {
+                    scan();
+                    check(NUMBER);
+                }
+                check(RPAREN);
+                check(SEMICOLON);
+                break;
 
             case BREAK: check(SEMICOLON); break;
             case SEMICOLON: break;
 
             default:
-                error("This makes no sense");
+                error(kind.name() + " not expected here");
         }
     }
 
@@ -205,6 +248,16 @@ public class Parser {
         block();
     }
 
+    private static void classDeclaration() {
+        check(CLASS);
+        check(IDENT);
+        check(LBRACE);
+
+        while (kind == IDENT)
+            varDeclaration();
+
+        check(RBRACE);
+    }
 
     /**
      * <pre>
@@ -215,39 +268,54 @@ public class Parser {
         check(IDENT);
 
         while (kind == PERIOD || kind == LBRACK) {
-            scan();
-            if (kind == PERIOD) check(IDENT);
-            else                expression(); check(RBRACK);
+            if (kind == PERIOD) {
+                scan();
+                check(IDENT);
+            } else {
+                scan();
+                expression();
+                check(RBRACK);
+            }
         }
     }
 
-    public static void factor() {
+    private static void factor() {
         switch (kind) {
             case IDENT:
                 designator();
-                if (kind == LBRACE) {
+                if (kind == LPAREN) {
                     scan();
-                    /* TODO */
-                    check(RBRACE);
+                    actualParameters();
+                    check(RPAREN);
                 }
                 break;
 
             case CHARACTER:
             case NUMBER: scan(); break;
 
-            /*
-             * TODO:
-             * "new" ident [ "[" Expr "]" ]
-             * "(" Expr ")".
-            */
+            case NEW:
+                scan();
+                check(IDENT);
+                if (kind == LBRACK) {
+                    scan();
+                    expression();
+                    check(RBRACK);
+                }
+                break;
+
+            case LBRACE:
+                scan();
+                expression();
+                check(RBRACE);
+                break;
 
             default:
-                error("Expected something that returns some value, got " + kind.name());
+                error(kind.name() + " unexpected in an factor of expression");
         }
 
     }
 
-    public static void term() {
+    private static void term() {
         factor();
 
         while (kind == ASTERISK || kind == MOD || kind == SLASH) {
@@ -256,13 +324,45 @@ public class Parser {
         }
     }
 
-    public static void expression() {
+    private static void expression() {
         if (kind == MINUS) scan();
 
         term();
         while (kind == PLUS || kind == MINUS) {
             scan();
             term();
+        }
+    }
+
+    private static void conditionFactor() {
+        expression();
+
+        if (kind == EQ  ||
+            kind == NEQ ||
+            kind == GRE ||
+            kind == GEQ ||
+            kind == LES ||
+            kind == LEQ ) scan();
+        else              error("Relational operator expected, got " + kind.name() + " instead");
+
+        expression();
+    }
+
+    private static void conditionTerm() {
+        conditionFactor();
+
+        while (kind == AND) {
+            scan();
+            conditionFactor();
+        }
+    }
+
+    private static void condition() {
+        conditionTerm();
+
+        while (kind == OR) {
+            scan();
+            conditionTerm();
         }
     }
 }
