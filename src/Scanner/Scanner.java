@@ -1,34 +1,37 @@
 package Scanner;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static Scanner.TokenKind.*;
 
 public class Scanner {
+    private static String filePath;
+
     private static final char EOLCHAR = '\n';
     private static final char EOFCHAR = (char) -1;
 
     private static HashMap<String, TokenKind> reservedNamesCodes;
     private static HashSet<Character> escapedCharacters;
+
     private static Reader in;
     private static char   ch;
     private static int    col;
     private static int    line;
-    private static int    error_count = 0;
 
-    public static void init() throws IOException {
+    public static void init(String filePath) throws IOException {
         col = 0;
         line = 1;
-        in = new InputStreamReader(new FileInputStream("program.mj"));
+
+        File inputFile = new File(filePath);
+        Scanner.filePath = inputFile.getAbsolutePath();
+
+        in = new InputStreamReader(new FileInputStream(inputFile));
+
         nextChar();
 
         escapedCharacters = Stream
@@ -38,19 +41,32 @@ public class Scanner {
         reservedNamesCodes = new HashMap<>();
 
         /* Convert all TokenKind's to array of lowercase strings */
-        String[] reservedNames = Arrays.stream(TokenKind.values())
-                .map(k -> k.name().toLowerCase())
-                .toArray(String[]::new);
+//        String[] reservedNames = Arrays.stream(TokenKind.values())
+//                .map(k -> k.name().toLowerCase())
+//                .toArray(String[]::new);
+//
+//        for (String name : reservedNames) {
+//            reservedNamesCodes.put(name, TokenKind.valueOf(name.toUpperCase()));
+//        }
 
-        for (String name : reservedNames) {
-            reservedNamesCodes.put(name, TokenKind.valueOf(name.toUpperCase()));
-        }
+        Arrays.stream(TokenKind.values())
+                        .forEach(k -> reservedNamesCodes.put(
+                                k.name().toLowerCase(), k
+                        ));
+
+        reservedNamesCodes.remove("error");
     }
 
-    private static void error(String message) {
-        System.err.printf("\nline: %-4d col: %-4d: ", line, col);
-        System.err.println(message);
-        error_count++;
+    /**
+     * Used in parser errors
+     */
+    public static String getFilePath() {
+        return filePath;
+    }
+
+    private static void error(String message, Token token) {
+        token.kind = ERROR;
+        token.text = message;
     }
 
     private static void nextChar() {
@@ -125,13 +141,11 @@ public class Scanner {
 
             // TODO:
             if (!escapedCharacters.contains(ch)) {
-                error("Illegal escape character '\\" + ch + '\'');
-                token.kind = ERROR;
+                error("Illegal escape character '\\" + ch + '\'', token);
             }
         } else {
             if (ch == '\'' || ch == '\"') {
-                token.kind = ERROR;
-                error("Characters ' and \" should be escaped");
+                error("Characters ' and \" should be escaped", token);
             }
         }
 
@@ -150,15 +164,12 @@ public class Scanner {
             while (ch != '\'' && ch != EOLCHAR && ch != EOFCHAR) nextChar();
 
             if (ch == '\'') {
-                token.kind = ERROR;
-                error("Character literal too long");
+                error("Character literal too long", token);
                 nextChar();
             } else if (ch == EOFCHAR) {
-                token.kind = EOF;
-                error("Unexpected end of file, character literal not closed");
+                error("Unexpected end of file, character literal not closed", token);
             } else {
-                token.kind = ERROR;
-                error("Character literal not closed");
+                error("Character literal not closed", token);
             }
 
             return;
@@ -260,8 +271,7 @@ public class Scanner {
                     token.kind = NEQ;
                     nextChar();
                 } else {
-                    error("'=' expected after '!'");
-                    token.kind = ERROR;
+                    error("'=' expected after '!'", token);
                 }
                 break;
 
@@ -271,8 +281,7 @@ public class Scanner {
                     token.kind = OR;
                     nextChar();
                 } else {
-                    error("Another '|' expected");
-                    token.kind = ERROR;
+                    error("Another '|' expected", token);
                 }
                 break;
 
@@ -282,8 +291,7 @@ public class Scanner {
                     token.kind = AND;
                     nextChar();
                 } else {
-                    error("Another '&' expected");
-                    token.kind = ERROR;
+                    error("Another '&' expected", token);
                 }
                 break;
 
@@ -292,8 +300,7 @@ public class Scanner {
                 break;
 
             default:
-                error("Unexpected character '" + ch + "'");
-                token.kind = ERROR;
+                error("Unexpected character '" + ch + "'", token);
                 nextChar();
         }
     }

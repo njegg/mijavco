@@ -10,10 +10,10 @@ import static Scanner.TokenKind.*;
 
 public class Parser {
     private static TokenKind kind;
-    private static Token current;
-    private static Token lookahead;
+    private static Token token;
 
     private static int errors = 0;
+    private static int lastError = 0;
 
     private static EnumSet<TokenKind> firstStatement;
 
@@ -22,14 +22,19 @@ public class Parser {
 
         scan();
         mijava();
-        System.out.println("Number of errors: " + errors);
+
+        System.out.println("Number of errors:" + errors);
     }
 
     private static void scan() {
-        current = lookahead;
-        lookahead = Scanner.nextToken();
-        kind = lookahead.kind;
-        System.out.println(lookahead);
+        token = Scanner.nextToken();
+
+        kind = token.kind;
+
+        if (kind == ERROR) {
+            error(token.text);
+            scan();
+        }
     }
 
     private static void check(TokenKind expected) {
@@ -38,14 +43,17 @@ public class Parser {
         } else {
             error(expected.name() + " expected, got " + kind.name());
         }
+
+        lastError++;
     }
 
     private static void error(String message) {
-        System.err.printf("\nline: %-4d col: %-4d: ", lookahead.line, lookahead.column);
-        System.err.println(message);
+        if (lastError > 3) {
+            System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
+            errors++;
+        }
 
-        throw new RuntimeException();
-        // System.exit(1);
+        lastError = 0;
     }
 
     /**
@@ -89,7 +97,12 @@ public class Parser {
             check(IDENT);
         }
 
-        check(SEMICOLON);
+        if (kind == ASSIGN) {
+            error("You can assign values here");
+            scan();
+        } else {
+            check(SEMICOLON);
+        }
     }
 
     private static void type() {
@@ -113,7 +126,12 @@ public class Parser {
 
         scan();
 
-        check(NUMBER);
+        if (kind != NUMBER && kind != CHARACTER) {
+            error("Value expected");
+        }
+
+        scan();
+
         check(SEMICOLON);
     }
 
@@ -127,6 +145,14 @@ public class Parser {
     }
 
     private static void statement() {
+        if (!firstStatement.contains(kind)) {
+            error("Illegal start of statement");
+
+            while (!firstStatement.contains(kind) && kind != EOF) {
+                scan();
+            }
+        }
+
         switch (kind) {
             case IDENT:
                 designator();
@@ -150,6 +176,9 @@ public class Parser {
                         scan();
                         check(SEMICOLON);
                         break;
+
+                    default:
+                        error(kind + " not expected right after identifier");
                 }
                 break;
 
@@ -205,7 +234,7 @@ public class Parser {
                 break;
 
             case BREAK: check(SEMICOLON); break;
-            case SEMICOLON: break;
+            case SEMICOLON: scan(); break;
 
             default:
                 error(kind.name() + " not expected here");
@@ -234,8 +263,8 @@ public class Parser {
         else                    error("Method return type expected");
 
         check(IDENT);
-        check(LPAREN);
 
+        check(LPAREN);
         if (kind == IDENT) formalParameters();
         check(RPAREN);
 
@@ -307,9 +336,8 @@ public class Parser {
                 break;
 
             default:
-                error(kind.name() + " unexpected in an factor of expression");
+                error(kind.name() + " not expected in an expression here");
         }
-
     }
 
     private static void term() {

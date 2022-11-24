@@ -9,12 +9,13 @@ import java.util.EnumSet;
 public class Main {
     static {
         try {
-            Scanner.init();
+            Scanner.init("program.mj");
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("Scanner initialization went wrong");
         }
     }
+
     public static void main(String[] args) throws IOException {
         testParser();
     }
