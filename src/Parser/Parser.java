@@ -138,21 +138,22 @@ public class Parser {
     private static void block() {
         check(LBRACE);
 
-        while (firstStatement.contains(kind))
-            statement();
+        while (kind != RBRACE && kind != EOF) {
+            if  (firstStatement.contains(kind)) {
+                statement();
+            } else {
+                error("Illegal start of statement with " + kind);
+
+                while (!firstStatement.contains(kind) && kind != EOF && kind != RBRACE) {
+                    scan();
+                }
+            }
+        }
 
         check(RBRACE);
     }
 
     private static void statement() {
-        if (!firstStatement.contains(kind)) {
-            error("Illegal start of statement");
-
-            while (!firstStatement.contains(kind) && kind != EOF) {
-                scan();
-            }
-        }
-
         switch (kind) {
             case IDENT:
                 designator();

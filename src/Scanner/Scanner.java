@@ -39,21 +39,11 @@ public class Scanner {
                 .collect(Collectors.toCollection(HashSet::new));
 
         reservedNamesCodes = new HashMap<>();
-
-        /* Convert all TokenKind's to array of lowercase strings */
-//        String[] reservedNames = Arrays.stream(TokenKind.values())
-//                .map(k -> k.name().toLowerCase())
-//                .toArray(String[]::new);
-//
-//        for (String name : reservedNames) {
-//            reservedNamesCodes.put(name, TokenKind.valueOf(name.toUpperCase()));
-//        }
-
+        /* "while" -> TokenKind.WHILE */
         Arrays.stream(TokenKind.values())
                         .forEach(k -> reservedNamesCodes.put(
                                 k.name().toLowerCase(), k
                         ));
-
         reservedNamesCodes.remove("error");
     }
 

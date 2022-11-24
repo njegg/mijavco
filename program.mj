@@ -4,27 +4,10 @@ program P
     int main ()
         int a;
     {
-        i = 123 + 23;
-        i++;
-
-        e = 'asd';
-
-        while( a > 0) {
-            a = a + '"';
-        }
-
-        if (a  b)
-            print(b);
-
-        i = 0;
-
-        while (a > 2) {
-            int;
-        }
+        class$
     }
 
     int f() {
-        if ++
-        if
+        int i = 0;
     }
 }
