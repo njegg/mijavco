@@ -1,52 +1,63 @@
 package Scanner;
 
 public enum TokenKind {
-    ERROR,
-    IDENT,
-    NUMBER,
-    CHARACTER,
+    IDENT("identifier"),
+    NUMBER("number literal"),
+    CHARACTER("character literal"),
 
-    PLUS,
-    MINUS,
-    ASTERISK,
-    SLASH,
-    MOD,
+    PLUS("'+'"),
+    MINUS("'-'"),
+    ASTERISK("'*'"),
+    SLASH("'/'"),
+    MOD("'%'"),
 
-    EQ,
-    NEQ,
-    LES,
-    LEQ,
-    GRE,
-    GEQ,
-    AND,
-    OR,
+    EQ("'=='"),
+    NEQ("'!='"),
+    LES("'<'"),
+    LEQ("'<='"),
+    GRE("'>'"),
+    GEQ("'>='"),
+    AND("&&"),
+    OR("||"),
 
-    ASSIGN,
-    INC,
-    DEC,
+    ASSIGN("'=='"),
+    INC("'++'"),
+    DEC("'--'"),
 
-    SEMICOLON,
-    COMMA,
-    PERIOD,
+    SEMICOLON("';'"),
+    COMMA("','"),
+    PERIOD("'.'"),
 
-    LPAREN,
-    RPAREN,
-    LBRACK,
-    RBRACK,
-    LBRACE,
-    RBRACE,
+    LPAREN("'('"),
+    RPAREN("')'"),
+    LBRACK("'['"),
+    RBRACK("']'"),
+    LBRACE("'{'"),
+    RBRACE("'}'"),
 
-    BREAK,
-    CLASS,
-    ELSE,
-    CONST,
-    IF,
-    NEW,
-    PRINT,
-    PROGRAM,
-    READ,
-    RETURN,
-    VOID,
-    WHILE,
-    EOF,
+    BREAK("'break' statement"),
+    CLASS("'class'"),
+    ELSE("'else' statement"),
+    CONST("'const'"),
+    IF("'if' statement"),
+    NEW("operator new"),
+    PRINT("print()"),
+    PROGRAM("'program'"),
+    READ("read()"),
+    RETURN("'return'"),
+    VOID("'void'"),
+    WHILE("'while'"),
+    EOF("End of file"),
+    ERROR("ERROR");
+
+    private final String niceName;
+
+    TokenKind(String niceName) {
+        this.niceName = niceName;
+    }
+
+    @Override
+    public String toString() {
+        return niceName;
+    }
 }

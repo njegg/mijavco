@@ -41,7 +41,7 @@ public class Parser {
         if (expected == kind) {
             scan();
         } else {
-            error(expected.name() + " expected, got " + kind.name());
+            error(expected + " expected, got " + kind);
         }
 
         lastError++;
@@ -237,7 +237,7 @@ public class Parser {
             case SEMICOLON: scan(); break;
 
             default:
-                error(kind.name() + " not expected here");
+                error(kind + " not expected here");
         }
     }
 
@@ -336,7 +336,7 @@ public class Parser {
                 break;
 
             default:
-                error(kind.name() + " not expected in an expression here");
+                error(kind + " not expected in an expression here");
         }
     }
 
@@ -368,7 +368,7 @@ public class Parser {
             kind == GEQ ||
             kind == LES ||
             kind == LEQ ) scan();
-        else              error("Relational operator expected, got " + kind.name() + " instead");
+        else              error("Relational operator expected, got " + kind + " instead");
 
         expression();
     }

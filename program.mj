@@ -24,9 +24,7 @@ program P
     }
 
     int f() {
-        error
-
-        pog ++ adsasd
+        if ++
         if
     }
 }
