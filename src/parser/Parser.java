@@ -67,11 +67,15 @@ public class Parser {
         check(PROGRAM);
         check(IDENT);
 
-        while (kind == IDENT || kind == CONST || kind == CLASS) {
+        while (kind == IDENT || kind == CONST || kind == STRUCT) {
             if      (kind == IDENT) varDeclaration();
             else if (kind == CONST) constDeclaration();
-            else                    classDeclaration();
+            else                    structDeclaration();
         }
+
+        /* If there was an error, skip to start of program block*/
+        while (kind != LBRACE && kind != EOF)
+            scan();
 
         check(LBRACE);
 
@@ -278,8 +282,8 @@ public class Parser {
         block();
     }
 
-    private static void classDeclaration() {
-        check(CLASS);
+    private static void structDeclaration() {
+        check(STRUCT);
         check(IDENT);
         check(LBRACE);
 

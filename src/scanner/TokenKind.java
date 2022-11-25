@@ -36,7 +36,7 @@ public enum TokenKind {
     RBRACE("'}'"),
 
     BREAK("'break' statement"),
-    CLASS("'class'"),
+    STRUCT("'struct'"),
     ELSE("'else' statement"),
     CONST("'const'"),
     IF("'if' statement"),

@@ -1,5 +1,11 @@
 program P
     int i;
+
+    struct Vector2
+    {
+        int x = 0;
+        int y = 0;
+    }
 {
     int main ()
         int a;
