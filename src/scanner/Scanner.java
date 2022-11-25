@@ -1,4 +1,4 @@
-package Scanner;
+package scanner;
 
 import java.io.*;
 import java.util.Arrays;
@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static Scanner.TokenKind.*;
+import static scanner.TokenKind.*;
 
 public class Scanner {
     private static String filePath;

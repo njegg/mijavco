@@ -1,4 +1,4 @@
-package Scanner;
+package scanner;
 
 public class Token {
     public TokenKind    kind;

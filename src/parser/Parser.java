@@ -1,19 +1,20 @@
-package Parser;
+package parser;
 
-import Scanner.Scanner;
-import Scanner.Token;
-import Scanner.TokenKind;
+import compiler.Main;
+import scanner.Scanner;
+import scanner.Token;
+import scanner.TokenKind;
 
 import java.util.EnumSet;
 
-import static Scanner.TokenKind.*;
+import static scanner.TokenKind.*;
 
 public class Parser {
     private static TokenKind kind;
     private static Token token;
 
-    private static int errors = 0;
     private static int lastError = 0;
+    private static final int errorIgnoreDistance = 3;
 
     private static EnumSet<TokenKind> firstStatement;
 
@@ -23,7 +24,6 @@ public class Parser {
         scan();
         mijava();
 
-        System.out.println("Number of errors:" + errors);
     }
 
     private static void scan() {
@@ -50,7 +50,7 @@ public class Parser {
     private static void error(String message) {
         if (lastError > 3) {
             System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
-            errors++;
+            Main.error();
         }
 
         lastError = 0;
@@ -151,6 +151,9 @@ public class Parser {
         }
 
         check(RBRACE);
+
+        /* After exiting the block, print new errors */
+        lastError = errorIgnoreDistance + 1;
     }
 
     private static void statement() {
@@ -167,7 +170,7 @@ public class Parser {
 
                     case LPAREN:
                         scan();
-                        actualParameters();
+                        if (kind != RPAREN) actualParameters();
                         check(RPAREN);
                         check(SEMICOLON);
                         break;
@@ -244,7 +247,7 @@ public class Parser {
 
     private static void actualParameters() {
         expression();
-        while(kind == SEMICOLON)
+        while(kind == COMMA)
             expression();
     }
 
@@ -330,10 +333,10 @@ public class Parser {
                 }
                 break;
 
-            case LBRACE:
+            case LPAREN:
                 scan();
                 expression();
-                check(RBRACE);
+                check(RPAREN);
                 break;
 
             default:
@@ -360,6 +363,11 @@ public class Parser {
         }
     }
 
+    /**
+     * cond: t {|| t}
+     * term: f {&& f}
+     * fact: expr [relop expr]
+     */
     private static void conditionFactor() {
         expression();
 
@@ -368,10 +376,10 @@ public class Parser {
             kind == GRE ||
             kind == GEQ ||
             kind == LES ||
-            kind == LEQ ) scan();
-        else              error("Relational operator expected, got " + kind + " instead");
-
-        expression();
+            kind == LEQ ) {
+            scan();
+            expression();
+        }
     }
 
     private static void conditionTerm() {
