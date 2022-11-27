@@ -10,6 +10,8 @@ import java.util.EnumSet;
 import static scanner.TokenKind.*;
 
 public class Parser {
+    private static SymbolTable symbolTable;
+
     private static TokenKind kind;
     private static Token token;
 
@@ -19,11 +21,11 @@ public class Parser {
     private static EnumSet<TokenKind> firstStatement;
 
     public static void parse() {
+        symbolTable = new SymbolTable();
         firstStatement = EnumSet.of(IDENT, IF, WHILE, BREAK, RETURN, READ, PRINT, LBRACE, SEMICOLON);
 
         scan();
         mijava();
-
     }
 
     private static void scan() {
@@ -40,15 +42,14 @@ public class Parser {
     private static void check(TokenKind expected) {
         if (expected == kind) {
             scan();
+            lastError++;
         } else {
             error(expected + " expected, got " + kind);
         }
-
-        lastError++;
     }
 
     private static void error(String message) {
-        if (lastError > 3) {
+        if (lastError >= errorIgnoreDistance) {
             System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
             Main.error();
         }
@@ -93,28 +94,57 @@ public class Parser {
      *  </pre>
      */
     private static void varDeclaration() {
-        type();
-        check(IDENT);
+        Type varType = type();
 
-        while (kind == COMMA) {
+        do {
+            if (kind == COMMA) scan();
+
+            if (kind != IDENT) {
+                error("Variable name expected, got: " + kind);
+                break;
+            } else if (varType.typeKind != TypeKind.NOTYPE) {
+                Symbol var = symbolTable.insert(token.text, SymbolKind.VAR, varType);
+                if (var == null) {
+                    error(String.format("Name '%s' already in use", token.text));
+                    break;
+                }
+            }
+
             scan();
-            check(IDENT);
-        }
+        } while (kind == COMMA);
 
         if (kind == ASSIGN) {
-            error("You can assign values here");
-            scan();
+            error("You can't assign values here");
         } else {
             check(SEMICOLON);
         }
     }
 
-    private static void type() {
-        check(IDENT);
+    private static Type type() {
+        Type type = new Type();
+        type.typeKind = TypeKind.NOTYPE;
+
+        if (kind != IDENT) {
+            error("Type name expected");
+        } else {
+            Symbol typeSymbol = symbolTable.find(token.text);
+            if (typeSymbol == null || typeSymbol.symbolKind != SymbolKind.TYPE) {
+                error('\'' + token.text + '\'' + " is not a type");
+            } else {
+                type.typeKind = typeSymbol.symbolType.typeKind;
+            }
+        }
+
+        scan();
+
         if (kind == LBRACK) {
             scan();
+            type.arrayTypeKind = type.typeKind;
+            type.typeKind = TypeKind.ARRAY;
             check(RBRACK);
         }
+
+        return type;
     }
 
     /**
@@ -140,6 +170,9 @@ public class Parser {
     }
 
     private static void block() {
+        /* Print new errors on block enter */
+        lastError = errorIgnoreDistance;
+
         check(LBRACE);
 
         while (kind != RBRACE && kind != EOF) {
@@ -157,7 +190,7 @@ public class Parser {
         check(RBRACE);
 
         /* After exiting the block, print new errors */
-        lastError = errorIgnoreDistance + 1;
+        lastError = errorIgnoreDistance;
     }
 
     private static void statement() {
@@ -278,6 +311,10 @@ public class Parser {
 
         while (kind == IDENT)
             varDeclaration();
+
+        /* If there was an error, skip to start of the block */
+        while (kind != LBRACE && kind != EOF)
+            scan();
 
         block();
     }
