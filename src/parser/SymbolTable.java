@@ -26,7 +26,9 @@ public class SymbolTable {
     }
 
     public Symbol insert(String name, SymbolKind kind, Type type) {
-        if (find(name) != null) {
+        Symbol exists = find(name);
+        if (exists != null) {
+            Parser.error(name + " is already in use as a " + exists.symbolKind);
             return null;
         }
 
@@ -44,7 +46,7 @@ public class SymbolTable {
         Symbol found = scope.locals.getOrDefault(name, null);
         Scope current = scope;
 
-        while (found == null && scope.outer != null) {
+        while (found == null && current.outer != null) {
             current = current.outer;
             found = current.locals.getOrDefault(name, null);
         }

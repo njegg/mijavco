@@ -5,7 +5,7 @@ import scanner.Scanner;
 import scanner.Token;
 import scanner.TokenKind;
 
-import java.util.EnumSet;
+import java.util.*;
 
 import static scanner.TokenKind.*;
 
@@ -14,6 +14,7 @@ public class Parser {
 
     private static TokenKind kind;
     private static Token token;
+    private static Token prevToken;
 
     private static int lastError = 0;
     private static final int errorIgnoreDistance = 3;
@@ -28,7 +29,18 @@ public class Parser {
         mijava();
     }
 
+    public static void error(String message) {
+        if (lastError >= errorIgnoreDistance) {
+            System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
+            Main.error();
+        }
+
+        lastError = 0;
+    }
+
+
     private static void scan() {
+        prevToken = token;
         token = Scanner.nextToken();
 
         kind = token.kind;
@@ -46,15 +58,6 @@ public class Parser {
         } else {
             error(expected + " expected, got " + kind);
         }
-    }
-
-    private static void error(String message) {
-        if (lastError >= errorIgnoreDistance) {
-            System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
-            Main.error();
-        }
-
-        lastError = 0;
     }
 
     /**
@@ -93,21 +96,17 @@ public class Parser {
      *  VarDecl = Type ident {"," ident} ";".
      *  </pre>
      */
-    private static void varDeclaration() {
+    private static Symbol varDeclaration() {
         Type varType = type();
+        Symbol var = null;
 
         do {
             if (kind == COMMA) scan();
 
             if (kind != IDENT) {
                 error("Variable name expected, got: " + kind);
-                break;
-            } else if (varType.typeKind != TypeKind.NOTYPE) {
-                Symbol var = symbolTable.insert(token.text, SymbolKind.VAR, varType);
-                if (var == null) {
-                    error(String.format("Name '%s' already in use", token.text));
-                    break;
-                }
+            } else if (varType != null && varType.typeKind != TypeKind.NOTYPE) {
+                var = symbolTable.insert(token.text, SymbolKind.VAR, varType);
             }
 
             scan();
@@ -118,11 +117,12 @@ public class Parser {
         } else {
             check(SEMICOLON);
         }
+
+        return var;
     }
 
     private static Type type() {
-        Type type = new Type();
-        type.typeKind = TypeKind.NOTYPE;
+        Type type = null;
 
         if (kind != IDENT) {
             error("Type name expected");
@@ -131,7 +131,7 @@ public class Parser {
             if (typeSymbol == null || typeSymbol.symbolKind != SymbolKind.TYPE) {
                 error('\'' + token.text + '\'' + " is not a type");
             } else {
-                type.typeKind = typeSymbol.symbolType.typeKind;
+                type = typeSymbol.symbolType;
             }
         }
 
@@ -139,8 +139,10 @@ public class Parser {
 
         if (kind == LBRACK) {
             scan();
-            type.arrayTypeKind = type.typeKind;
-            type.typeKind = TypeKind.ARRAY;
+            if (type != null) {
+                type.arrayTypeKind = type.typeKind;
+                type.typeKind = TypeKind.ARRAY;
+            }
             check(RBRACK);
         }
 
@@ -288,25 +290,52 @@ public class Parser {
             expression();
     }
 
-    private static void formalParameters() {
-        type();
-        check(IDENT);
-        while (kind == COMMA) {
+    private static LinkedList<Symbol> formalParameters() {
+        LinkedList<Symbol> params = new LinkedList<>();
+
+        do {
+            if (kind == COMMA) scan();
+
+            Type paramType = type();
+
+            if (kind == IDENT) {
+                Symbol param = symbolTable.insert(token.text, SymbolKind.METHOD, paramType);
+
+                if (param != null) {
+                    params.addFirst(param);
+                }
+            }
+
             scan();
-            type();
-            check(IDENT);
-        }
+        } while (kind == COMMA);
+
+        return params;
     }
 
-    private static void method() {
+    private static Symbol method() {
+        Type methodType = new Type();
+        Symbol method = null;
+
         if      (kind == VOID)  scan();
-        else if (kind == IDENT) type();
+        else if (kind == IDENT) methodType = type();
         else                    error("Method return type expected");
 
-        check(IDENT);
+        if (kind != IDENT) {
+            error("Method name expected, got" + kind);
+        } else {
+            method = symbolTable.insert(token.text, SymbolKind.METHOD, methodType);
+        }
+
+        scan();
 
         check(LPAREN);
-        if (kind == IDENT) formalParameters();
+
+        symbolTable.openScope();
+
+        if (kind == IDENT) {
+            formalParameters();
+        }
+
         check(RPAREN);
 
         while (kind == IDENT)
@@ -317,6 +346,10 @@ public class Parser {
             scan();
 
         block();
+
+        symbolTable.closeScope();
+
+        return method;
     }
 
     private static void structDeclaration() {
@@ -335,8 +368,16 @@ public class Parser {
      * Designator = ident { "." ident | "[" Expr "]" }.
      * </pre>
      */
-    private static void designator() {
+    private static Symbol designator() {
+        Symbol designator = null;
         check(IDENT);
+
+        if (prevToken.kind == IDENT) {
+            designator = symbolTable.find(prevToken.text);
+            if (designator == null) {
+                error("Nothing is identified by " + prevToken.text);
+            }
+        }
 
         while (kind == PERIOD || kind == LBRACK) {
             if (kind == PERIOD) {
@@ -348,6 +389,8 @@ public class Parser {
                 check(RBRACK);
             }
         }
+
+        return designator;
     }
 
     private static void factor() {

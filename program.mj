@@ -1,17 +1,8 @@
 program P
-    int global;
-    int char;
 {
-    int main ()
-        char local;
-        mynum a, b, c;
-    {}
-
-    void f()
-        char global;
-    {}
-
-    void g()
+    void main(int a, bad b)
         int local;
-    {}
+    {
+        v++;
+    }
 }
