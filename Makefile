@@ -8,7 +8,7 @@ all: $(SRCS)
 	javac -d $(BUILD_DIR) $(SRCS)
 
 run:
-	java -cp $(BUILD_DIR) $(TARGET)
+	java -cp $(BUILD_DIR) $(TARGET) $(args)
 
 
 
