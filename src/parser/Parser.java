@@ -16,8 +16,8 @@ public class Parser {
     private static Token token;
     private static Token prevToken;
 
-    private static int lastError = 0;
-    private static final int errorIgnoreDistance = 3;
+    private static final int ERROR_IGNORE_DISTANCE = 4;
+    private static int lastError = ERROR_IGNORE_DISTANCE;
 
     private static EnumSet<TokenKind> firstStatement;
 
@@ -26,11 +26,19 @@ public class Parser {
         firstStatement = EnumSet.of(IDENT, IF, WHILE, BREAK, RETURN, READ, PRINT, LBRACE, SEMICOLON);
 
         scan();
-        mijava();
+        mijava(); /* Checks the whole program file */
+
+        /* Check if main function is declared */
+        Symbol main = symbolTable.find("main");
+        if (main == null || main.symbolKind != SymbolKind.FUNCTION) {
+            error("Program needs to have a function called main()");
+        }
+
+        symbolTable.dump();
     }
 
     public static void error(String message) {
-        if (lastError >= errorIgnoreDistance) {
+        if (lastError >= ERROR_IGNORE_DISTANCE) {
             System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
             Main.error();
         }
@@ -60,21 +68,18 @@ public class Parser {
         }
     }
 
-    /**
-     *  <pre>
-     *  Program = "program" ident
-     *            {ConstDecl | VarDecl | ClassDecl}
-     *            "{" {MethodDecl} "}".
-     *  </pre>
-     */
     private static void mijava() {
         check(PROGRAM);
         check(IDENT);
 
-        while (kind == IDENT || kind == CONST || kind == STRUCT) {
-            if      (kind == IDENT) varDeclaration();
-            else if (kind == CONST) constDeclaration();
-            else                    structDeclaration();
+        while (true) {
+            if      (kind == IDENT)  varDeclaration();
+            else if (kind == CONST)  constDeclaration();
+            else if (kind == STRUCT) structDeclaration();
+            else {
+                if (kind != LBRACE) error(kind + " not expected here");
+                break;
+            }
         }
 
         /* If there was an error, skip to start of program block*/
@@ -84,7 +89,7 @@ public class Parser {
         check(LBRACE);
 
         while (kind == IDENT || kind == VOID)
-            method();
+            function();
 
         check(RBRACE);
 
@@ -99,6 +104,12 @@ public class Parser {
     private static Symbol varDeclaration() {
         Type varType = type();
         Symbol var = null;
+
+        // If block start is reached, exit immediately, so it's not skipped
+        // with rest of check()'s
+        // After this method there is usually a loop that jumps to
+        // start of the block on error and will not find it if it is entered now
+        if (kind == LBRACE) return null;
 
         do {
             if (kind == COMMA) scan();
@@ -123,13 +134,14 @@ public class Parser {
 
     private static Type type() {
         Type type = null;
+        String name = token.text;
 
         if (kind != IDENT) {
             error("Type name expected");
         } else {
-            Symbol typeSymbol = symbolTable.find(token.text);
+            Symbol typeSymbol = symbolTable.find(name);
             if (typeSymbol == null || typeSymbol.symbolKind != SymbolKind.TYPE) {
-                error('\'' + token.text + '\'' + " is not a type");
+                error('\'' + name + '\'' + " is not a type");
             } else {
                 type = typeSymbol.symbolType;
             }
@@ -140,8 +152,17 @@ public class Parser {
         if (kind == LBRACK) {
             scan();
             if (type != null) {
-                type.arrayTypeKind = type.typeKind;
-                type.typeKind = TypeKind.ARRAY;
+                Symbol symbol = symbolTable.find(name + "[]");
+                if (symbol == null) {
+                    symbol = symbolTable.insert(
+                                name + "[]",
+                                SymbolKind.TYPE,
+                                new Type(TypeKind.REFERENCE));
+
+                    symbol.symbolType.arrayType = type;
+                }
+
+                type = symbol.symbolType;
             }
             check(RBRACK);
         }
@@ -152,28 +173,34 @@ public class Parser {
     /**
      *  ConstDecl = "final" Type ident "=" (number | charConst) ";".
      */
-    private static void constDeclaration() {
+    private static Symbol constDeclaration() {
         check(CONST);
-        type();
-        check(IDENT);
+        Type type = type();
+        Symbol symbol = null;
 
-        if (kind != ASSIGN)
-            error("You forgot to initialize a constant");
-
-        scan();
-
-        if (kind != NUMBER && kind != CHARACTER) {
-            error("Value expected");
+        if (kind != IDENT) {
+            error(IDENT + " expected");
+        } else if (type.typeKind != TypeKind.CHAR && type.typeKind != TypeKind.INT) {
+            error(type.typeKind + " cannot be constant");
+        } else {
+            symbol = symbolTable.insert(token.text, SymbolKind.CONST, type);
         }
 
         scan();
+        if (kind != ASSIGN) error("You forgot to initialize a constant");
 
+        scan();
+        if (kind != NUMBER && kind != CHARACTER) error("Value expected");
+
+        scan();
         check(SEMICOLON);
+
+        return symbol;
     }
 
     private static void block() {
         /* Print new errors on block enter */
-        lastError = errorIgnoreDistance;
+        lastError = ERROR_IGNORE_DISTANCE;
 
         check(LBRACE);
 
@@ -192,7 +219,7 @@ public class Parser {
         check(RBRACE);
 
         /* After exiting the block, print new errors */
-        lastError = errorIgnoreDistance;
+        lastError = ERROR_IGNORE_DISTANCE;
     }
 
     private static void statement() {
@@ -227,7 +254,15 @@ public class Parser {
 
             case RETURN:
                 scan();
-                if (kind == SEMICOLON) break; // No return value
+                TypeKind functionType = symbolTable.getScopeFunctionType();
+
+                if (kind == SEMICOLON) { // No return value
+                    if (functionType != null && functionType != TypeKind.NOTYPE) {
+                        error("Return value expected");
+                    }
+                    break;
+                }
+
                 expression();
                 check(SEMICOLON);
                 break;
@@ -299,7 +334,7 @@ public class Parser {
             Type paramType = type();
 
             if (kind == IDENT) {
-                Symbol param = symbolTable.insert(token.text, SymbolKind.METHOD, paramType);
+                Symbol param = symbolTable.insert(token.text, SymbolKind.FUNCTION, paramType);
 
                 if (param != null) {
                     params.addFirst(param);
@@ -312,31 +347,35 @@ public class Parser {
         return params;
     }
 
-    private static Symbol method() {
-        Type methodType = new Type();
-        Symbol method = null;
+    private static Symbol function() {
+        Type functionType = new Type();
+        Symbol function = null;
 
         if      (kind == VOID)  scan();
-        else if (kind == IDENT) methodType = type();
-        else                    error("Method return type expected");
+        else if (kind == IDENT) functionType = type();
+        else                    error("Function return type expected, got: " + kind);
 
         if (kind != IDENT) {
-            error("Method name expected, got" + kind);
+            error("Function name expected, got" + kind);
         } else {
-            method = symbolTable.insert(token.text, SymbolKind.METHOD, methodType);
+            function = symbolTable.insert(token.text, SymbolKind.FUNCTION, functionType);
         }
 
         scan();
 
         check(LPAREN);
 
-        symbolTable.openScope();
+        symbolTable.openScope(function);
 
         if (kind == IDENT) {
             formalParameters();
         }
 
         check(RPAREN);
+
+        if (kind != IDENT && kind != LBRACE) {
+            error(kind + " not allowed in here");
+        }
 
         while (kind == IDENT)
             varDeclaration();
@@ -349,25 +388,41 @@ public class Parser {
 
         symbolTable.closeScope();
 
-        return method;
+        return function;
     }
 
-    private static void structDeclaration() {
+    private static Symbol structDeclaration() {
+        Symbol symbol = null;
+
         check(STRUCT);
-        check(IDENT);
+
+        if (kind != IDENT) {
+            error("struct identifier expected");
+        } else {
+            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, new Type(TypeKind.REFERENCE));
+        }
+
+        scan();
         check(LBRACE);
 
-        while (kind == IDENT)
-            varDeclaration();
+        HashMap<String, Symbol> fields = new HashMap<>();
+
+        while (kind == IDENT) {
+            Symbol field = varDeclaration();
+            if (field != null) {
+                fields.put(field.name, field);
+            }
+        }
+
+        if (symbol != null) {
+            symbol.symbolType.fields = fields;
+        }
 
         check(RBRACE);
+
+        return symbol;
     }
 
-    /**
-     * <pre>
-     * Designator = ident { "." ident | "[" Expr "]" }.
-     * </pre>
-     */
     private static Symbol designator() {
         Symbol designator = null;
         check(IDENT);
@@ -393,21 +448,34 @@ public class Parser {
         return designator;
     }
 
-    private static void factor() {
+    private static Symbol factor() {
+        Symbol symbol = null;
+        Type type;
+
         switch (kind) {
             case IDENT:
-                designator();
+
+                symbol = designator();
                 if (kind == LPAREN) {
                     scan();
-                    actualParameters();
+                    actualParameters(); // TODO
                     check(RPAREN);
                 }
                 break;
 
             case CHARACTER:
-            case NUMBER: scan(); break;
+                symbol = new Symbol();
+                symbol.symbolType = new Type(TypeKind.CHAR);
+                scan();
+                break;
 
-            case NEW:
+            case NUMBER:
+                symbol = new Symbol();
+                symbol.symbolType = new Type(TypeKind.INT);
+                scan();
+                break;
+
+            case NEW: // TODO
                 scan();
                 check(IDENT);
                 if (kind == LBRACK) {
@@ -426,6 +494,8 @@ public class Parser {
             default:
                 error(kind + " not expected in an expression here");
         }
+
+        return symbol;
     }
 
     private static void term() {

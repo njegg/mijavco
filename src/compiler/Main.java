@@ -17,7 +17,9 @@ public class Main {
         Scanner.init(args[0]);
         Parser.parse();
 
-        System.out.println("Number of errors:" + errors);
+        if (errors > 0) {
+            System.out.println("Number of errors: " + errors);
+        }
     }
 
     /**

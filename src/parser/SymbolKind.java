@@ -3,7 +3,7 @@ package parser;
 public enum SymbolKind {
     CONST("constant"),
     VAR("variable"),
-    METHOD("method"),
+    FUNCTION("function"),
     TYPE("type");
 
     private String niceName;

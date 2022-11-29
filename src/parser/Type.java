@@ -4,11 +4,14 @@ import java.util.HashMap;
 
 public class Type {
     TypeKind typeKind;
-    TypeKind arrayTypeKind;
+    Type arrayType;
     HashMap<String, Symbol> fields; /* Struct */
 
     public Type() {
-        typeKind = TypeKind.NOTYPE;
-        arrayTypeKind = TypeKind.NOTYPE;
+        this(TypeKind.NOTYPE);
+    }
+
+    public Type(TypeKind kind) {
+        typeKind = kind;
     }
 }

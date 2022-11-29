@@ -1,24 +1,30 @@
 package parser;
 
+import java.util.LinkedList;
+
 public class SymbolTable {
-    public Scope scope;
+    private Scope scope;
+    private LinkedList<Scope> scopes; // For dumping
 
     public SymbolTable() {
         scope = new Scope();
+        scopes = new LinkedList<>();
 
-        Type intType = new Type();
-        intType.typeKind = TypeKind.INT;
-        Type charType = new Type();
-        charType.typeKind = TypeKind.CHAR;
+        insert("int", SymbolKind.TYPE, new Type(TypeKind.INT));
+        insert("char", SymbolKind.TYPE, new Type(TypeKind.CHAR));
 
-        insert("int", SymbolKind.TYPE, intType);
-        insert("char", SymbolKind.TYPE, charType);
+        insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT));
+        insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.INT));
     }
 
-    public void openScope() {
+    public void openScope(Symbol function) {
         Scope innerScope = new Scope();
         innerScope.outer = scope;
         scope = innerScope;
+
+        scope.function = function;
+
+        scopes.addLast(scope);
     }
 
     public void closeScope() {
@@ -56,5 +62,13 @@ public class SymbolTable {
 
     public Symbol findField(String name, Type type) {
         return null;
+    }
+
+    public TypeKind getScopeFunctionType() {
+        return scope.function == null ? null : scope.function.symbolType.typeKind;
+    }
+
+    public void dump() {
+        scopes.forEach(s -> scope.locals.values().forEach(System.out::println));
     }
 }

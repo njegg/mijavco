@@ -11,6 +11,15 @@ public class Symbol {
     int value;                      /* Const */
     boolean global;                 /* Var */
 
-    int parameterCount;             /* Method */
-    HashMap<String, Symbol> locals; /* Method */
+    int parameterCount;             /* Function */
+    HashMap<String, Symbol> locals; /* Function */
+
+    @Override
+    public String toString() {
+        return String.format("%s %s %s",
+                    symbolKind,
+                    symbolType.typeKind,
+                    name
+                );
+    }
 }

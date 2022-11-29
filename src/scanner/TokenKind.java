@@ -47,7 +47,7 @@ public enum TokenKind {
     RETURN("'return'"),
     VOID("'void'"),
     WHILE("'while'"),
-    EOF("End of file"),
+    EOF("end of file"),
     ERROR("ERROR");
 
     private final String niceName;

@@ -5,6 +5,8 @@ import java.util.HashMap;
 public class Scope {
     Scope outer;
     HashMap<String, Symbol> locals;
+    Symbol function;
+
     int variableCount;
 
     public Scope() {

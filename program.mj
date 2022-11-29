@@ -1,8 +1,14 @@
 program P
-{
-    void main(int a, bad b)
-        int local;
+    const int i = 0;
+    struct vec2
     {
-        v++;
+        int x;
+        int y;
+    }
+    vec2[] pog;
+{
+    void main(int v)
+    {
+
     }
 }
