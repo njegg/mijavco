@@ -4,7 +4,8 @@ public enum SymbolKind {
     CONST("constant"),
     VAR("variable"),
     FUNCTION("function"),
-    TYPE("type");
+    TYPE("type"),
+    NOSYM("error symbol");
 
     private String niceName;
 

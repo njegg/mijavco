@@ -34,7 +34,7 @@ public class Parser {
             error("Program needs to have a function called main()");
         }
 
-        symbolTable.dump();
+//        symbolTable.dump();
     }
 
     public static void error(String message) {
@@ -152,18 +152,21 @@ public class Parser {
         if (kind == LBRACK) {
             scan();
             if (type != null) {
-                Symbol symbol = symbolTable.find(name + "[]");
+                String typeName = name + "[]";
+                Symbol symbol = symbolTable.find(typeName);
                 if (symbol == null) {
                     symbol = symbolTable.insert(
-                                name + "[]",
+                                typeName,
                                 SymbolKind.TYPE,
                                 new Type(TypeKind.REFERENCE));
 
                     symbol.symbolType.arrayType = type;
+                    symbol.symbolType.name = typeName;
                 }
 
                 type = symbol.symbolType;
             }
+
             check(RBRACK);
         }
 
@@ -225,17 +228,33 @@ public class Parser {
     private static void statement() {
         switch (kind) {
             case IDENT:
-                designator();
+                Symbol designator = designator();
 
                 switch (kind) {
                     case ASSIGN:
                         scan();
-                        expression();
+
+                        if (designator.symbolKind != SymbolKind.VAR) {
+                            error(designator.symbolKind + " cannot be used here");
+                        }
+
+                        Symbol expression = expression();
+                        if (!expression.assignable(designator)) {
+                            error(String.format("Expression of type '%s' not assignable to '%s'",
+                                    expression.symbolType, designator));
+                        }
+
                         check(SEMICOLON);
                         break;
 
                     case LPAREN:
                         scan();
+
+                        if (designator.symbolKind != SymbolKind.FUNCTION) {
+                            error(designator.symbolKind + " is not a " + SymbolKind.FUNCTION);
+                        }
+
+                        // TODO:
                         if (kind != RPAREN) actualParameters();
                         check(RPAREN);
                         check(SEMICOLON);
@@ -244,6 +263,11 @@ public class Parser {
                     case INC:
                     case DEC:
                         scan();
+
+                        if (designator.symbolKind != SymbolKind.VAR) {
+                            error("Cant do arithmetic operations on a " + designator.symbolKind);
+                        }
+
                         check(SEMICOLON);
                         break;
 
@@ -334,7 +358,7 @@ public class Parser {
             Type paramType = type();
 
             if (kind == IDENT) {
-                Symbol param = symbolTable.insert(token.text, SymbolKind.FUNCTION, paramType);
+                Symbol param = symbolTable.insert(token.text, SymbolKind.VAR, paramType);
 
                 if (param != null) {
                     params.addFirst(param);
@@ -348,7 +372,7 @@ public class Parser {
     }
 
     private static Symbol function() {
-        Type functionType = new Type();
+        Type functionType = new Type(TypeKind.NOTYPE);
         Symbol function = null;
 
         if      (kind == VOID)  scan();
@@ -425,15 +449,18 @@ public class Parser {
 
     private static Symbol designator() {
         Symbol designator = null;
+
         check(IDENT);
 
         if (prevToken.kind == IDENT) {
             designator = symbolTable.find(prevToken.text);
             if (designator == null) {
                 error("Nothing is identified by " + prevToken.text);
+                designator = new Symbol();
             }
         }
 
+        // TODO:
         while (kind == PERIOD || kind == LBRACK) {
             if (kind == PERIOD) {
                 scan();
@@ -449,12 +476,11 @@ public class Parser {
     }
 
     private static Symbol factor() {
-        Symbol symbol = null;
-        Type type;
+        Symbol symbol = new Symbol();
+        symbol.symbolType = new Type(TypeKind.NOTYPE);
 
         switch (kind) {
             case IDENT:
-
                 symbol = designator();
                 if (kind == LPAREN) {
                     scan();
@@ -475,7 +501,8 @@ public class Parser {
                 scan();
                 break;
 
-            case NEW: // TODO
+             // TODO
+            case NEW:
                 scan();
                 check(IDENT);
                 if (kind == LBRACK) {
@@ -498,23 +525,50 @@ public class Parser {
         return symbol;
     }
 
-    private static void term() {
-        factor();
+    private static Symbol term() {
+        Symbol factor1 = factor();
+        Symbol factorN = null;
+
+        if (kind == ASTERISK || kind == MOD || kind == SLASH) {
+            if (!factor1.symbolType.usedInArithmetics()) {
+                error("Cannot do arithmetic operations on '" + factor1 + "'");
+            }
+        }
 
         while (kind == ASTERISK || kind == MOD || kind == SLASH) {
             scan();
-            factor();
+            factorN = factor();
+
+            if (!factorN.symbolType.usedInArithmetics()) {
+                error("Cannot do arithmetic operations on '" + factorN + "'");
+            }
         }
+
+        return factor1;
     }
 
-    private static void expression() {
+    private static Symbol expression() {
         if (kind == MINUS) scan();
 
-        term();
+        Symbol term1 = term();
+        Symbol termN = null;
+
+        if (kind == PLUS || kind == MINUS) {
+            if (!term1.symbolType.usedInArithmetics()) {
+                error("Cannot do arithmetic operations on '" + term1 + "'");
+            }
+        }
+
         while (kind == PLUS || kind == MINUS) {
             scan();
-            term();
+            termN = term();
+
+            if (termN != null && !termN.symbolType.usedInArithmetics()) {
+                error("Cannot do arithmetic operations on '" + termN + "'");
+            }
         }
+
+        return term1;
     }
 
     /**

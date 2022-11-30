@@ -13,6 +13,9 @@ public class SymbolTable {
         insert("int", SymbolKind.TYPE, new Type(TypeKind.INT));
         insert("char", SymbolKind.TYPE, new Type(TypeKind.CHAR));
 
+        Symbol nullSymbol = insert("null", SymbolKind.CONST, new Type(TypeKind.REFERENCE));
+        nullSymbol.symbolType.fields = null;
+
         insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT));
         insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.INT));
     }
