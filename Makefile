@@ -5,10 +5,10 @@ TARGET := compiler.Main
 SRCS := $(shell find $(SRC_DIR) -name '*.java')
 
 all: $(SRCS)
-	javac -d $(BUILD_DIR) $(SRCS)
+	@javac -d $(BUILD_DIR) $(SRCS)
 
-run:
-	java -cp $(BUILD_DIR) $(TARGET) $(args)
+run: all
+	@java -cp $(BUILD_DIR) $(TARGET) $(args)
 
 
 

@@ -1,9 +1,6 @@
 package parser;
 
-import javax.lang.model.type.NoType;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 
 public class Type {
     TypeKind typeKind;
@@ -16,6 +13,8 @@ public class Type {
         if (typeKind == TypeKind.REFERENCE) {
             fields = new HashMap<>();
         }
+
+        name = typeKind.toString();
     }
 
     @Override

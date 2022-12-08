@@ -1,23 +1,24 @@
 package parser;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 
 public class Symbol {
-    SymbolKind symbolKind;
-    String name;
-    String typeName;
-    Type symbolType;
-    int address;
+    public SymbolKind symbolKind;
+    public String name;
+    public Type symbolType;
+    public int address;
 
-    int value;                      /* Const */
-    boolean global;                 /* Var */
+    public int value;                            /* Const */
+    public boolean global;                       /* Var */
 
-    int parameterCount;             /* Function */
-    HashMap<String, Symbol> locals; /* Function */
+    public LinkedList<Symbol> parameters;        /* Function */
+    public LinkedHashMap<String, Symbol> locals; /* Function */
 
     Symbol() {
         symbolKind = SymbolKind.NOSYM;
         symbolType = new Type(TypeKind.NOTYPE);
+        name = "symbol";
     }
 
     @Override

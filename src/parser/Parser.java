@@ -5,7 +5,9 @@ import scanner.Scanner;
 import scanner.Token;
 import scanner.TokenKind;
 
+import javax.swing.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static scanner.TokenKind.*;
 
@@ -33,13 +35,11 @@ public class Parser {
         if (main == null || main.symbolKind != SymbolKind.FUNCTION) {
             error("Program needs to have a function called main()");
         }
-
-//        symbolTable.dump();
     }
 
     public static void error(String message) {
         if (lastError >= ERROR_IGNORE_DISTANCE) {
-            System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), token.line, token.column, message);
+            System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), prevToken.line, prevToken.column, message);
             Main.error();
         }
 
@@ -228,6 +228,7 @@ public class Parser {
     private static void statement() {
         switch (kind) {
             case IDENT:
+                String designatorName = token.text;
                 Symbol designator = designator();
 
                 switch (kind) {
@@ -254,8 +255,7 @@ public class Parser {
                             error(designator.symbolKind + " is not a " + SymbolKind.FUNCTION);
                         }
 
-                        // TODO:
-                        if (kind != RPAREN) actualParameters();
+                        actualParameters(symbolTable.find(designatorName));
                         check(RPAREN);
                         check(SEMICOLON);
                         break;
@@ -278,16 +278,26 @@ public class Parser {
 
             case RETURN:
                 scan();
-                TypeKind functionType = symbolTable.getScopeFunctionType();
+                Symbol scopeFunction = symbolTable.getScopeFunction();
 
                 if (kind == SEMICOLON) { // No return value
-                    if (functionType != null && functionType != TypeKind.NOTYPE) {
+                    if (scopeFunction.symbolType != null && scopeFunction.symbolType.typeKind != TypeKind.NOTYPE) {
                         error("Return value expected");
                     }
                     break;
                 }
 
-                expression();
+                if (scopeFunction.symbolType.typeKind == TypeKind.NOTYPE) {
+                    error("Return value not expected, function is of type void");
+                } else {
+                    Symbol expression = expression();
+                    if (!expression.assignable(scopeFunction)) {
+                        error(String.format("Return type %s expected, got %s",
+                                scopeFunction.symbolType.name,
+                                expression.symbolType.name));
+                    }
+                }
+
                 check(SEMICOLON);
                 break;
 
@@ -343,14 +353,43 @@ public class Parser {
         }
     }
 
-    private static void actualParameters() {
-        expression();
-        while(kind == COMMA)
-            expression();
+    private static void actualParameters(Symbol function) {
+        if (function.parameters.size() > 0 && kind == RPAREN) {
+            error("Parameters expected: " +
+                    function.parameters.stream().map(s -> s.symbolType.name).collect(Collectors.toList()));
+            return;
+        } else if (kind == RPAREN) {
+            return;
+        }
+
+        Iterator<Symbol> formalParameters = function.parameters.iterator();
+        Symbol parameter, expression;
+
+        do {
+            if (kind == COMMA) scan();
+
+            expression = expression();
+
+            if (formalParameters.hasNext()) {
+                parameter = formalParameters.next();
+
+                if (!expression.assignable(parameter)) {
+                    error(String.format("Parameter types do not match, expected %s but got %s",
+                            parameter.symbolType.name,
+                            expression.symbolType.name));
+                }
+            } else {
+                error(String.format("Too manny parameters provided, function %s requires %d",
+                        function.name, function.parameters.size()));
+            }
+
+        } while(kind == COMMA);
     }
 
     private static LinkedList<Symbol> formalParameters() {
         LinkedList<Symbol> params = new LinkedList<>();
+
+        if (kind == RPAREN) return params;
 
         do {
             if (kind == COMMA) scan();
@@ -361,7 +400,7 @@ public class Parser {
                 Symbol param = symbolTable.insert(token.text, SymbolKind.VAR, paramType);
 
                 if (param != null) {
-                    params.addFirst(param);
+                    params.addLast(param);
                 }
             }
 
@@ -373,7 +412,7 @@ public class Parser {
 
     private static Symbol function() {
         Type functionType = new Type(TypeKind.NOTYPE);
-        Symbol function = null;
+        Symbol function = new Symbol();
 
         if      (kind == VOID)  scan();
         else if (kind == IDENT) functionType = type();
@@ -391,9 +430,7 @@ public class Parser {
 
         symbolTable.openScope(function);
 
-        if (kind == IDENT) {
-            formalParameters();
-        }
+        function.parameters = formalParameters();
 
         check(RPAREN);
 
@@ -423,7 +460,9 @@ public class Parser {
         if (kind != IDENT) {
             error("struct identifier expected");
         } else {
-            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, new Type(TypeKind.REFERENCE));
+            Type newType = new Type(TypeKind.REFERENCE);
+            newType.name = token.text;
+            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, newType);
         }
 
         scan();
@@ -455,7 +494,7 @@ public class Parser {
         if (prevToken.kind == IDENT) {
             designator = symbolTable.find(prevToken.text);
             if (designator == null) {
-                error("Nothing is identified by " + prevToken.text);
+                error(prevToken.text + " not in scope");
                 designator = new Symbol();
             }
         }
@@ -484,7 +523,7 @@ public class Parser {
                 symbol = designator();
                 if (kind == LPAREN) {
                     scan();
-                    actualParameters(); // TODO
+                    actualParameters(symbolTable.find(symbol.name)); // TODO
                     check(RPAREN);
                 }
                 break;
@@ -527,7 +566,7 @@ public class Parser {
 
     private static Symbol term() {
         Symbol factor1 = factor();
-        Symbol factorN = null;
+        Symbol factorN;
 
         if (kind == ASTERISK || kind == MOD || kind == SLASH) {
             if (!factor1.symbolType.usedInArithmetics()) {
@@ -551,7 +590,7 @@ public class Parser {
         if (kind == MINUS) scan();
 
         Symbol term1 = term();
-        Symbol termN = null;
+        Symbol termN;
 
         if (kind == PLUS || kind == MINUS) {
             if (!term1.symbolType.usedInArithmetics()) {
@@ -571,11 +610,6 @@ public class Parser {
         return term1;
     }
 
-    /**
-     * cond: t {|| t}
-     * term: f {&& f}
-     * fact: expr [relop expr]
-     */
     private static void conditionFactor() {
         expression();
 

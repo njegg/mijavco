@@ -5,9 +5,9 @@ public enum SymbolKind {
     VAR("variable"),
     FUNCTION("function"),
     TYPE("type"),
-    NOSYM("error symbol");
+    NOSYM("");
 
-    private String niceName;
+    private final String niceName;
 
     SymbolKind(String niceName) {
         this.niceName = niceName;

@@ -1,17 +1,25 @@
 package parser;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 
 public class Scope {
     Scope outer;
-    HashMap<String, Symbol> locals;
+    LinkedList<Scope> inners;
+    LinkedHashMap<String, Symbol> locals;
     Symbol function;
 
     int variableCount;
 
     public Scope() {
-        locals = new HashMap<>();
+        locals = new LinkedHashMap<>();
+        inners = new LinkedList<>();
         variableCount = 0;
         outer = null;
+    }
+
+    public void print() {
+        locals.values().forEach(System.out::println);
+        inners.forEach(Scope::print);
     }
 }

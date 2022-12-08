@@ -3,11 +3,13 @@ package parser;
 import java.util.LinkedList;
 
 public class SymbolTable {
+    private Scope rootScope;
     private Scope scope;
     private LinkedList<Scope> scopes; // For dumping
 
     public SymbolTable() {
         scope = new Scope();
+        rootScope = scope;
         scopes = new LinkedList<>();
 
         insert("int", SymbolKind.TYPE, new Type(TypeKind.INT));
@@ -23,6 +25,7 @@ public class SymbolTable {
     public void openScope(Symbol function) {
         Scope innerScope = new Scope();
         innerScope.outer = scope;
+        scope.inners.add(innerScope);
         scope = innerScope;
 
         scope.function = function;
@@ -67,11 +70,11 @@ public class SymbolTable {
         return null;
     }
 
-    public TypeKind getScopeFunctionType() {
-        return scope.function == null ? null : scope.function.symbolType.typeKind;
+    public Symbol getScopeFunction() {
+        return scope.function;
     }
 
     public void dump() {
-        scopes.forEach(s -> scope.locals.values().forEach(System.out::println));
+        rootScope.print();
     }
 }
