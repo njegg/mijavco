@@ -402,6 +402,9 @@ public class Parser {
                 if (param != null) {
                     params.addLast(param);
                 }
+            } else if (kind != COMMA && kind != RPAREN) {
+                error(String.format("%s not expected here, expected tokens: %s, %s",
+                        kind, COMMA, RPAREN));
             }
 
             scan();
@@ -521,8 +524,8 @@ public class Parser {
         switch (kind) {
             case IDENT:
                 symbol = designator();
-                if (kind == LPAREN) {
-                    scan();
+                if (symbol.symbolKind == SymbolKind.FUNCTION) {
+                    check(LPAREN);
                     actualParameters(symbolTable.find(symbol.name)); // TODO
                     check(RPAREN);
                 }

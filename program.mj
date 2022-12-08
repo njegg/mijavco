@@ -1,13 +1,10 @@
 program P
     struct vec2 { int x; int y; }
 {
-    char getC() { return 'c'; }
+    int get2(int 2) { return 2; }
 
-    int main(int c, char cc, vec2 asd)
-        int i;
-        vec2 v;
+    int main()
     {
-        main(main(1, 's', v), 'c', v);
-        return getC();
+        get2;
     }
 }
