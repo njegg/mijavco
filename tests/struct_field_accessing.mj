@@ -1,0 +1,17 @@
+program P
+    struct node { int v; node next; }
+{
+    int main()
+        node root;
+        node n;
+        node m;
+    {
+        root.v = 2;
+        root.next = n;
+        root.next.next = m;
+        root.next.next.next = root.next;
+
+        root.v.next = root;
+        root.v = root
+    }
+}

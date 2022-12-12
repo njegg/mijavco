@@ -493,7 +493,6 @@ public class Parser {
         Symbol designator = null;
 
         check(IDENT);
-
         if (prevToken.kind == IDENT) {
             designator = symbolTable.find(prevToken.text);
             if (designator == null) {
@@ -502,14 +501,37 @@ public class Parser {
             }
         }
 
-        // TODO:
         while (kind == PERIOD || kind == LBRACK) {
             if (kind == PERIOD) {
                 scan();
                 check(IDENT);
+
+                if (designator != null) {
+                    if (!designator.symbolType.isStruct()) {
+                        error(designator + " has no accessible fields");
+                    } else if (prevToken.kind == IDENT) {
+                        designator = designator.symbolType.fields.get(prevToken.text);
+                        if (designator == null) {
+                            error(String.format("Cannot find field " + token.text));
+                        }
+                    }
+                }
             } else {
                 scan();
-                expression();
+                Symbol expression = expression();
+
+                if (designator != null) {
+                    if (!designator.symbolType.isArray()) {
+                        error("Array type expected, found " + expression.symbolType);
+                    } else if (expression.symbolType.typeKind != TypeKind.INT) {
+                        error("Expression of type " + TypeKind.INT + " expected");
+                    } else {
+                        Type arrayType = designator.symbolType.arrayType;
+                        designator = designator.copy();
+                        designator.symbolType = arrayType;
+                    }
+                }
+
                 check(RBRACK);
             }
         }
@@ -526,30 +548,43 @@ public class Parser {
                 symbol = designator();
                 if (symbol.symbolKind == SymbolKind.FUNCTION) {
                     check(LPAREN);
-                    actualParameters(symbolTable.find(symbol.name)); // TODO
+                    actualParameters(symbolTable.find(symbol.name));
                     check(RPAREN);
                 }
                 break;
 
             case CHARACTER:
-                symbol = new Symbol();
                 symbol.symbolType = new Type(TypeKind.CHAR);
                 scan();
                 break;
 
             case NUMBER:
-                symbol = new Symbol();
                 symbol.symbolType = new Type(TypeKind.INT);
                 scan();
                 break;
 
-             // TODO
             case NEW:
                 scan();
                 check(IDENT);
+                if (prevToken.kind == IDENT) {
+                    symbol = symbolTable.find(prevToken.text);
+                    if (symbol == null) {
+                        error(prevToken.text + " not in scope");
+                        symbol = new Symbol();
+                    } else if (symbol.symbolKind != SymbolKind.TYPE) {
+                        error(prevToken.text + " is not a type");
+                    }
+                }
+
                 if (kind == LBRACK) {
                     scan();
-                    expression();
+                    symbol = symbolTable.find(symbol.symbolType.name + "[]");
+
+                    Symbol arraySize = expression();
+                    if (arraySize.symbolType.typeKind != TypeKind.INT) {
+                        error("Expression of type " + TypeKind.INT + " expected");
+                    }
+
                     check(RBRACK);
                 }
                 break;

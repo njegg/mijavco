@@ -33,4 +33,18 @@ public class Symbol {
     public boolean assignable(Symbol that) {
         return this.symbolType.equals(that.symbolType);
     }
+
+    public Symbol copy() {
+        Symbol copy = new Symbol();
+        copy.symbolType = this.symbolType;
+        copy.symbolKind = this.symbolKind;
+        copy.name = this.name;
+        copy.parameters = this.parameters;
+        copy.address = this.address;
+        copy.global = this.global;
+        copy.value = this.value;
+        copy.locals = this.locals;
+
+        return copy;
+    }
 }

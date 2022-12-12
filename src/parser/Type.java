@@ -17,6 +17,18 @@ public class Type {
         name = typeKind.toString();
     }
 
+    public boolean usedInArithmetics() {
+        return typeKind != TypeKind.NOTYPE;
+    }
+
+    public boolean isStruct() {
+        return fields != null;
+    }
+
+    public boolean isArray() {
+        return arrayType != null;
+    }
+
     @Override
     public boolean equals(Object obj) {
         Type that = (Type) obj;
@@ -34,10 +46,6 @@ public class Type {
         }
 
         return true;
-    }
-
-    public boolean usedInArithmetics() {
-        return typeKind != TypeKind.NOTYPE;
     }
 
     @Override
