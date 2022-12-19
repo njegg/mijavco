@@ -46,7 +46,6 @@ public class Parser {
         lastError = 0;
     }
 
-
     private static void scan() {
         prevToken = token;
         token = Scanner.nextToken();
