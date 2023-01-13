@@ -30,8 +30,9 @@ public class Symbol {
                 );
     }
 
-    public boolean assignable(Symbol that) {
-        return this.symbolType.equals(that.symbolType);
+    public boolean assignableTo(Symbol that) {
+        return that.symbolType.typeKind == TypeKind.NOTYPE
+                || this.symbolType.equals(that.symbolType);
     }
 
     public Symbol copy() {

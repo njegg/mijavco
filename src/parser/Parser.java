@@ -5,7 +5,6 @@ import scanner.Scanner;
 import scanner.Token;
 import scanner.TokenKind;
 
-import javax.swing.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +33,8 @@ public class Parser {
         Symbol main = symbolTable.find("main");
         if (main == null || main.symbolKind != SymbolKind.FUNCTION) {
             error("Program needs to have a function called main()");
+        } else if (main.parameters.size() > 0) {
+            error("Main must not have parameters");
         }
     }
 
@@ -95,11 +96,6 @@ public class Parser {
         check(EOF);
     }
 
-    /**
-     *  <pre>
-     *  VarDecl = Type ident {"," ident} ";".
-     *  </pre>
-     */
     private static Symbol varDeclaration() {
         Type varType = type();
         Symbol var = null;
@@ -206,6 +202,8 @@ public class Parser {
 
         check(LBRACE);
 
+        symbolTable.openScope(null);
+
         while (kind != RBRACE && kind != EOF) {
             if  (firstStatement.contains(kind)) {
                 statement();
@@ -219,6 +217,8 @@ public class Parser {
         }
 
         check(RBRACE);
+
+        symbolTable.closeScope();
 
         /* After exiting the block, print new errors */
         lastError = ERROR_IGNORE_DISTANCE;
@@ -239,7 +239,7 @@ public class Parser {
                         }
 
                         Symbol expression = expression();
-                        if (!expression.assignable(designator)) {
+                        if (!expression.assignableTo(designator)) {
                             error(String.format("Expression of type '%s' not assignable to '%s'",
                                     expression.symbolType, designator));
                         }
@@ -290,7 +290,7 @@ public class Parser {
                     error("Return value not expected, function is of type void");
                 } else {
                     Symbol expression = expression();
-                    if (!expression.assignable(scopeFunction)) {
+                    if (!expression.assignableTo(scopeFunction)) {
                         error(String.format("Return type %s expected, got %s",
                                 scopeFunction.symbolType.name,
                                 expression.symbolType.name));
@@ -321,6 +321,7 @@ public class Parser {
                 check(LPAREN);
                 condition();
                 check(RPAREN);
+                symbolTable.setNextScopeIsLoop();
                 statement();
                 break;
 
@@ -344,7 +345,14 @@ public class Parser {
                 check(SEMICOLON);
                 break;
 
-            case BREAK: check(SEMICOLON); break;
+            case BREAK:
+                scan();
+                check(SEMICOLON);
+                if (!symbolTable.isScopeLoop()) {
+                    error(BREAK + " can only be used inside loops");
+                }
+                break;
+
             case SEMICOLON: scan(); break;
 
             default:
@@ -353,7 +361,7 @@ public class Parser {
     }
 
     private static void actualParameters(Symbol function) {
-        if (function.parameters.size() > 0 && kind == RPAREN) {
+        if (function.symbolKind == SymbolKind.FUNCTION && function.parameters.size() > 0 && kind == RPAREN) {
             error("Parameters expected: " +
                     function.parameters.stream().map(s -> s.symbolType.name).collect(Collectors.toList()));
             return;
@@ -372,14 +380,14 @@ public class Parser {
             if (formalParameters.hasNext()) {
                 parameter = formalParameters.next();
 
-                if (!expression.assignable(parameter)) {
+                if (!expression.assignableTo(parameter)) {
                     error(String.format("Parameter types do not match, expected %s but got %s",
                             parameter.symbolType.name,
                             expression.symbolType.name));
                 }
             } else {
-                error(String.format("Too manny parameters provided, function %s requires %d",
-                        function.name, function.parameters.size()));
+                error(String.format("Too manny parameters provided, function %s requires %d with types: %s",
+                        function.name, function.parameters.size(), function.parameters));
             }
 
         } while(kind == COMMA);

@@ -3,12 +3,13 @@ package parser;
 import java.util.LinkedList;
 
 public class SymbolTable {
-    private Scope rootScope;
+    private final Scope rootScope;
+    private final LinkedList<Scope> scopes; // For dumping
     private Scope scope;
-    private LinkedList<Scope> scopes; // For dumping
+    private boolean nextScopeIsLoop;
 
     public SymbolTable() {
-        scope = new Scope();
+        scope = new Scope(false);
         rootScope = scope;
         scopes = new LinkedList<>();
 
@@ -18,12 +19,29 @@ public class SymbolTable {
         Symbol nullSymbol = insert("null", SymbolKind.CONST, new Type(TypeKind.REFERENCE));
         nullSymbol.symbolType.fields = null;
 
-        insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT));
-        insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.INT));
+        Symbol ctoi = insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT));
+        openScope(ctoi);
+        ctoi.parameters = new LinkedList<>();
+        ctoi.parameters.addLast(insert("c", SymbolKind.VAR, new Type(TypeKind.CHAR)));
+        closeScope();
+
+        Symbol itoc = insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.CHAR));
+        openScope(itoc);
+        itoc.parameters = new LinkedList<>();
+        itoc.parameters.addLast(insert("i", SymbolKind.VAR, new Type(TypeKind.INT)));
+        closeScope();
+
+        // TODO garbage solution
+        Symbol len = insert("len", SymbolKind.FUNCTION, new Type(TypeKind.INT));
+        openScope(len);
+        len.parameters = new LinkedList<>();
+        len.parameters.addLast(insert("arr", SymbolKind.VAR, new Type(TypeKind.NOTYPE)));
+        closeScope();
     }
 
     public void openScope(Symbol function) {
-        Scope innerScope = new Scope();
+        Scope innerScope = new Scope(nextScopeIsLoop);
+        nextScopeIsLoop = false;
         innerScope.outer = scope;
         scope.inners.add(innerScope);
         scope = innerScope;
@@ -71,10 +89,10 @@ public class SymbolTable {
     }
 
     public Symbol getScopeFunction() {
-        return scope.function;
+        return scope.getFunction();
     }
+    public void setNextScopeIsLoop() { nextScopeIsLoop = true; }
+    public boolean isScopeLoop() { return scope.isLoop(); }
 
-    public void dump() {
-        rootScope.print();
-    }
+    public void dump() { rootScope.print(); }
 }

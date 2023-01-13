@@ -11,7 +11,11 @@ public class Scope {
 
     int variableCount;
 
-    public Scope() {
+    private final boolean isLoop;
+
+    public Scope(boolean isLoop) {
+        this.isLoop = isLoop;
+
         locals = new LinkedHashMap<>();
         inners = new LinkedList<>();
         variableCount = 0;
@@ -21,5 +25,13 @@ public class Scope {
     public void print() {
         locals.values().forEach(System.out::println);
         inners.forEach(Scope::print);
+    }
+
+    public boolean isLoop() {
+        return isLoop || outer != null && outer.isLoop();
+    }
+
+    public Symbol getFunction() {
+        return function != null ? function : (outer != null ? outer.getFunction() : null);
     }
 }
