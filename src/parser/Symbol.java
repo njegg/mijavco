@@ -1,5 +1,7 @@
 package parser;
 
+import scanner.Token;
+
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 
@@ -15,10 +17,18 @@ public class Symbol {
     public LinkedList<Symbol> parameters;        /* Function */
     public LinkedHashMap<String, Symbol> locals; /* Function */
 
+    public int column, line;
+
     Symbol() {
         symbolKind = SymbolKind.NOSYM;
         symbolType = new Type(TypeKind.NOTYPE);
         name = "symbol";
+    }
+
+    Symbol(Token token) {
+        this();
+        column = token.column;
+        line = token.line;
     }
 
     @Override

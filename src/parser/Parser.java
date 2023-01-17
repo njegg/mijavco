@@ -112,7 +112,7 @@ public class Parser {
             if (kind != IDENT) {
                 error("Variable name expected, got: " + kind);
             } else if (varType != null && varType.typeKind != TypeKind.NOTYPE) {
-                var = symbolTable.insert(token.text, SymbolKind.VAR, varType);
+                var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
             }
 
             scan();
@@ -153,7 +153,9 @@ public class Parser {
                     symbol = symbolTable.insert(
                                 typeName,
                                 SymbolKind.TYPE,
-                                new Type(TypeKind.REFERENCE));
+                                new Type(TypeKind.REFERENCE),
+                                token
+                    );
 
                     symbol.symbolType.arrayType = type;
                     symbol.symbolType.name = typeName;
@@ -168,9 +170,6 @@ public class Parser {
         return type;
     }
 
-    /**
-     *  ConstDecl = "final" Type ident "=" (number | charConst) ";".
-     */
     private static Symbol constDeclaration() {
         check(CONST);
         Type type = type();
@@ -181,7 +180,7 @@ public class Parser {
         } else if (type.typeKind != TypeKind.CHAR && type.typeKind != TypeKind.INT) {
             error(type.typeKind + " cannot be constant");
         } else {
-            symbol = symbolTable.insert(token.text, SymbolKind.CONST, type);
+            symbol = symbolTable.insert(token.text, SymbolKind.CONST, type, token);
         }
 
         scan();
@@ -328,7 +327,12 @@ public class Parser {
             case READ:
                 scan();
                 check(LPAREN);
-                designator();
+
+                Symbol readDesignator = designator();
+                if (readDesignator.symbolType.typeKind != TypeKind.INT && readDesignator.symbolType.typeKind != TypeKind.CHAR) {
+                    error("Can only read characters and numbers, type " + readDesignator.symbolType.typeKind + " can't");
+                }
+
                 check(RPAREN);
                 check(SEMICOLON);
                 break;
@@ -336,11 +340,16 @@ public class Parser {
             case PRINT:
                 scan();
                 check(LPAREN);
-                expression();
+                Symbol printExpression = expression();
+                if (printExpression.symbolType.typeKind != TypeKind.INT && printExpression.symbolType.typeKind != TypeKind.CHAR) {
+                    error("Can only print characters and numbers, type " + printExpression.symbolType.typeKind + " can't");
+                }
+
                 while (kind == COMMA) {
                     scan();
                     check(NUMBER);
                 }
+
                 check(RPAREN);
                 check(SEMICOLON);
                 break;
@@ -404,7 +413,7 @@ public class Parser {
             Type paramType = type();
 
             if (kind == IDENT) {
-                Symbol param = symbolTable.insert(token.text, SymbolKind.VAR, paramType);
+                Symbol param = symbolTable.insert(token.text, SymbolKind.VAR, paramType, token);
 
                 if (param != null) {
                     params.addLast(param);
@@ -422,7 +431,7 @@ public class Parser {
 
     private static Symbol function() {
         Type functionType = new Type(TypeKind.NOTYPE);
-        Symbol function = new Symbol();
+        Symbol function = new Symbol(token);
 
         if      (kind == VOID)  scan();
         else if (kind == IDENT) functionType = type();
@@ -431,17 +440,14 @@ public class Parser {
         if (kind != IDENT) {
             error("Function name expected, got" + kind);
         } else {
-            function = symbolTable.insert(token.text, SymbolKind.FUNCTION, functionType);
+            function = symbolTable.insert(token.text, SymbolKind.FUNCTION, functionType, token);
         }
 
         scan();
 
         check(LPAREN);
-
         symbolTable.openScope(function);
-
         function.parameters = formalParameters();
-
         check(RPAREN);
 
         if (kind != IDENT && kind != LBRACE) {
@@ -472,7 +478,7 @@ public class Parser {
         } else {
             Type newType = new Type(TypeKind.REFERENCE);
             newType.name = token.text;
-            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, newType);
+            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, newType, token);
         }
 
         scan();
@@ -504,7 +510,7 @@ public class Parser {
             designator = symbolTable.find(prevToken.text);
             if (designator == null) {
                 error(prevToken.text + " not in scope");
-                designator = new Symbol();
+                designator = new Symbol(token);
             }
         }
 
@@ -547,7 +553,7 @@ public class Parser {
     }
 
     private static Symbol factor() {
-        Symbol symbol = new Symbol();
+        Symbol symbol = new Symbol(token);
         symbol.symbolType = new Type(TypeKind.NOTYPE);
 
         switch (kind) {
@@ -577,7 +583,7 @@ public class Parser {
                     symbol = symbolTable.find(prevToken.text);
                     if (symbol == null) {
                         error(prevToken.text + " not in scope");
-                        symbol = new Symbol();
+                        symbol = new Symbol(token);
                     } else if (symbol.symbolKind != SymbolKind.TYPE) {
                         error(prevToken.text + " is not a type");
                     }

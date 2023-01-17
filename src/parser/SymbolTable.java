@@ -1,5 +1,7 @@
 package parser;
 
+import scanner.Token;
+
 import java.util.LinkedList;
 
 public class SymbolTable {
@@ -13,29 +15,29 @@ public class SymbolTable {
         rootScope = scope;
         scopes = new LinkedList<>();
 
-        insert("int", SymbolKind.TYPE, new Type(TypeKind.INT));
-        insert("char", SymbolKind.TYPE, new Type(TypeKind.CHAR));
+        insert("int", SymbolKind.TYPE, new Type(TypeKind.INT), null);
+        insert("char", SymbolKind.TYPE, new Type(TypeKind.CHAR), null);
 
-        Symbol nullSymbol = insert("null", SymbolKind.CONST, new Type(TypeKind.REFERENCE));
+        Symbol nullSymbol = insert("null", SymbolKind.CONST, new Type(TypeKind.REFERENCE), null);
         nullSymbol.symbolType.fields = null;
 
-        Symbol ctoi = insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT));
+        Symbol ctoi = insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT), null);
         openScope(ctoi);
         ctoi.parameters = new LinkedList<>();
-        ctoi.parameters.addLast(insert("c", SymbolKind.VAR, new Type(TypeKind.CHAR)));
+        ctoi.parameters.addLast(insert("c", SymbolKind.VAR, new Type(TypeKind.CHAR), null));
         closeScope();
 
-        Symbol itoc = insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.CHAR));
+        Symbol itoc = insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.CHAR), null);
         openScope(itoc);
         itoc.parameters = new LinkedList<>();
-        itoc.parameters.addLast(insert("i", SymbolKind.VAR, new Type(TypeKind.INT)));
+        itoc.parameters.addLast(insert("i", SymbolKind.VAR, new Type(TypeKind.INT), null));
         closeScope();
 
         // TODO garbage solution
-        Symbol len = insert("len", SymbolKind.FUNCTION, new Type(TypeKind.INT));
+        Symbol len = insert("len", SymbolKind.FUNCTION, new Type(TypeKind.INT), null);
         openScope(len);
         len.parameters = new LinkedList<>();
-        len.parameters.addLast(insert("arr", SymbolKind.VAR, new Type(TypeKind.NOTYPE)));
+        len.parameters.addLast(insert("arr", SymbolKind.VAR, new Type(TypeKind.NOTYPE), null));
         closeScope();
     }
 
@@ -55,14 +57,14 @@ public class SymbolTable {
         scope = scope.outer;
     }
 
-    public Symbol insert(String name, SymbolKind kind, Type type) {
+    public Symbol insert(String name, SymbolKind kind, Type type, Token token) {
         Symbol exists = find(name);
         if (exists != null) {
             Parser.error(name + " is already in use as a " + exists.symbolKind);
             return null;
         }
 
-        Symbol symbol = new Symbol();
+        Symbol symbol = token == null ? new Symbol() : new Symbol(token);
         symbol.symbolType = type;
         symbol.name = name;
         symbol.symbolKind = kind;
