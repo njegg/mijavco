@@ -10,7 +10,8 @@ program P
 		int x, i;
 	{ //---------- Initialize val
 		val = new Table;
-		val.pos = new char[size]; val.neg = new int[size];
+		val.pos = new int[size];
+		val.neg = new int[size];
 		i = 0;
 		while (i < size) {
 			val.pos[i] = 0; val.neg[i] = 0;

@@ -1,13 +1,15 @@
 program P
-    struct P {
-        int x, y;
-    }
+	const int size = 10;
+	struct Table {
+		int[] pos;
+		int[] neg;
+	}
+	Table val;
 {
-	int main()
-		P[] par;
+	void main()
 	{
-        par = new P[23];
-
-        return par[0].x;
+	    val = new Table;
+	    val.neg = new int [size];
+		val.pos = new char[size];
 	}
 }

@@ -417,6 +417,10 @@ public class Parser {
 
                 if (param != null) {
                     params.addLast(param);
+                } else {
+                    Symbol dummy = new Symbol(); // For error checking later in the program
+                    dummy.symbolType = paramType;
+                    params.addLast(dummy);
                 }
             } else if (kind != COMMA && kind != RPAREN) {
                 error(String.format("%s not expected here, expected tokens: %s, %s",
@@ -479,6 +483,11 @@ public class Parser {
             Type newType = new Type(TypeKind.REFERENCE);
             newType.name = token.text;
             symbol = symbolTable.insert(token.text, SymbolKind.TYPE, newType, token);
+
+            Type newArrType = new Type(TypeKind.REFERENCE);
+            newArrType.name = newType.name + "[]";
+            newArrType.arrayType = newType;
+            symbolTable.insert(newArrType.name, SymbolKind.TYPE, newArrType, null);
         }
 
         scan();
@@ -525,7 +534,7 @@ public class Parser {
                     } else if (prevToken.kind == IDENT) {
                         designator = designator.symbolType.fields.get(prevToken.text);
                         if (designator == null) {
-                            error(String.format("Cannot find field " + token.text));
+                            error(String.format("Cannot find field " + prevToken.text));
                         }
                     }
                 }

@@ -20,7 +20,7 @@ public enum TokenKind {
     AND("&&"),
     OR("||"),
 
-    ASSIGN("'=='"),
+    ASSIGN("'='"),
     INC("'++'"),
     DEC("'--'"),
 

@@ -15,8 +15,21 @@ public class SymbolTable {
         rootScope = scope;
         scopes = new LinkedList<>();
 
-        insert("int", SymbolKind.TYPE, new Type(TypeKind.INT), null);
-        insert("char", SymbolKind.TYPE, new Type(TypeKind.CHAR), null);
+        Type intType = new Type(TypeKind.INT);
+        Type charType = new Type(TypeKind.CHAR);
+        insert("int", SymbolKind.TYPE, intType , null);
+        insert("char", SymbolKind.TYPE, charType, null);
+
+        Type intArrType = new Type(TypeKind.REFERENCE);
+        intArrType.arrayType = intType;
+        intArrType.name = "int[]";
+
+        Type charArrType = new Type(TypeKind.REFERENCE);
+        charArrType.arrayType = charType;
+        charArrType.name = "char[]";
+
+        insert("int[]", SymbolKind.TYPE, intArrType, null);
+        insert("char[]", SymbolKind.TYPE, charArrType, null);
 
         Symbol nullSymbol = insert("null", SymbolKind.CONST, new Type(TypeKind.REFERENCE), null);
         nullSymbol.symbolType.fields = null;
