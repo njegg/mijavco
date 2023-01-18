@@ -73,7 +73,7 @@ public class Parser {
         check(IDENT);
 
         while (true) {
-            if      (kind == IDENT)  varDeclaration();
+            if      (kind == IDENT)  varDeclaration(false);
             else if (kind == CONST)  constDeclaration();
             else if (kind == STRUCT) structDeclaration();
             else {
@@ -96,7 +96,7 @@ public class Parser {
         check(EOF);
     }
 
-    private static Symbol varDeclaration() {
+    private static Symbol varDeclaration(boolean isStructField) {
         Type varType = type();
         Symbol var = null;
 
@@ -112,7 +112,14 @@ public class Parser {
             if (kind != IDENT) {
                 error("Variable name expected, got: " + kind);
             } else if (varType != null && varType.typeKind != TypeKind.NOTYPE) {
-                var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
+                if (!isStructField){
+                    var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
+                } else {
+                    var = new Symbol(token);
+                    var.name = token.text;
+                    var.symbolKind = SymbolKind.VAR;
+                    var.symbolType = varType;
+                }
             }
 
             scan();
@@ -459,7 +466,7 @@ public class Parser {
         }
 
         while (kind == IDENT)
-            varDeclaration();
+            varDeclaration(false);
 
         /* If there was an error, skip to start of the block */
         while (kind != LBRACE && kind != EOF)
@@ -496,7 +503,7 @@ public class Parser {
         HashMap<String, Symbol> fields = new HashMap<>();
 
         while (kind == IDENT) {
-            Symbol field = varDeclaration();
+            Symbol field = varDeclaration(true);
             if (field != null) {
                 fields.put(field.name, field);
             }

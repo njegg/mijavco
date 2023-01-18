@@ -1,15 +1,12 @@
 program P
-	const int size = 10;
-	struct Table {
-		int[] pos;
-		int[] neg;
+    int n;
+	struct N {
+	    int n;
 	}
-	Table val;
 {
 	void main()
+	    N epik;
 	{
-	    val = new Table;
-	    val.neg = new int [size];
-		val.pos = new char[size];
+	    epik.n = n;
 	}
 }
