@@ -1,12 +1,8 @@
 program P
-    int n;
-	struct N {
-	    int n;
-	}
 {
 	void main()
-	    N epik;
+	    int i;
 	{
-	    epik.n = n;
+	    i = 0 + 0 * 0 + 0;
 	}
 }

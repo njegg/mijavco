@@ -1,5 +1,8 @@
 package parser;
 
+import codegen.CodeBuffer;
+import codegen.Instruction;
+import codegen.Operand;
 import compiler.Main;
 import scanner.Scanner;
 import scanner.Token;
@@ -244,10 +247,10 @@ public class Parser {
                             error(designator.symbolKind + " cannot be used here");
                         }
 
-                        Symbol expression = expression();
-                        if (!expression.assignableTo(designator)) {
+                        Operand expression = expression();
+                        if (!expression.type.assignableTo(designator.symbolType)) {
                             error(String.format("Expression of type '%s' not assignable to '%s'",
-                                    expression.symbolType, designator));
+                                    expression.type, designator));
                         }
 
                         check(SEMICOLON);
@@ -295,11 +298,11 @@ public class Parser {
                 if (scopeFunction.symbolType.typeKind == TypeKind.NOTYPE) {
                     error("Return value not expected, function is of type void");
                 } else {
-                    Symbol expression = expression();
-                    if (!expression.assignableTo(scopeFunction)) {
+                    Operand expression = expression();
+                    if (!expression.type.assignableTo(scopeFunction.symbolType)) {
                         error(String.format("Return type %s expected, got %s",
                                 scopeFunction.symbolType.name,
-                                expression.symbolType.name));
+                                expression.type.name));
                     }
                 }
 
@@ -347,9 +350,9 @@ public class Parser {
             case PRINT:
                 scan();
                 check(LPAREN);
-                Symbol printExpression = expression();
-                if (printExpression.symbolType.typeKind != TypeKind.INT && printExpression.symbolType.typeKind != TypeKind.CHAR) {
-                    error("Can only print characters and numbers, type " + printExpression.symbolType.typeKind + " can't");
+                Operand printExpression = expression();
+                if (printExpression.type.typeKind != TypeKind.INT && printExpression.type.typeKind != TypeKind.CHAR) {
+                    error("Can only print characters and numbers, type " + printExpression.type.typeKind + " can't");
                 }
 
                 while (kind == COMMA) {
@@ -386,7 +389,8 @@ public class Parser {
         }
 
         Iterator<Symbol> formalParameters = function.parameters.iterator();
-        Symbol parameter, expression;
+        Symbol parameter;
+        Operand expression;
 
         do {
             if (kind == COMMA) scan();
@@ -396,10 +400,10 @@ public class Parser {
             if (formalParameters.hasNext()) {
                 parameter = formalParameters.next();
 
-                if (!expression.assignableTo(parameter)) {
+                if (!expression.type.assignableTo(parameter.symbolType)) {
                     error(String.format("Parameter types do not match, expected %s but got %s",
                             parameter.symbolType.name,
-                            expression.symbolType.name));
+                            expression.type.name));
                 }
             } else {
                 error(String.format("Too manny parameters provided, function %s requires %d with types: %s",
@@ -547,12 +551,12 @@ public class Parser {
                 }
             } else {
                 scan();
-                Symbol expression = expression();
+                Operand expression = expression();
 
                 if (designator != null) {
                     if (!designator.symbolType.isArray()) {
-                        error("Array type expected, found " + expression.symbolType);
-                    } else if (expression.symbolType.typeKind != TypeKind.INT) {
+                        error("Array type expected, found " + expression.type);
+                    } else if (expression.type.typeKind != TypeKind.INT) {
                         error("Expression of type " + TypeKind.INT + " expected");
                     } else {
                         Type arrayType = designator.symbolType.arrayType;
@@ -568,7 +572,7 @@ public class Parser {
         return designator;
     }
 
-    private static Symbol factor() {
+    private static Operand factor() {
         Symbol symbol = new Symbol(token);
         symbol.symbolType = new Type(TypeKind.NOTYPE);
 
@@ -584,11 +588,15 @@ public class Parser {
 
             case CHARACTER:
                 symbol.symbolType = new Type(TypeKind.CHAR);
+                symbol.value = token.value;
+                symbol.symbolKind = SymbolKind.CONST;
                 scan();
                 break;
 
             case NUMBER:
                 symbol.symbolType = new Type(TypeKind.INT);
+                symbol.value = token.value;
+                symbol.symbolKind = SymbolKind.CONST;
                 scan();
                 break;
 
@@ -609,8 +617,8 @@ public class Parser {
                     scan();
                     symbol = symbolTable.find(symbol.symbolType.name + "[]");
 
-                    Symbol arraySize = expression();
-                    if (arraySize.symbolType.typeKind != TypeKind.INT) {
+                    Operand arraySize = expression();
+                    if (arraySize.type.typeKind != TypeKind.INT) {
                         error("Expression of type " + TypeKind.INT + " expected");
                     }
 
@@ -628,24 +636,33 @@ public class Parser {
                 error(kind + " not expected in an expression here");
         }
 
-        return symbol;
+        Operand operand = new Operand(symbol);
+        CodeBuffer.load(operand);
+
+        return operand;
     }
 
-    private static Symbol term() {
-        Symbol factor1 = factor();
-        Symbol factorN;
+    private static Operand term() {
+        Operand factor1 = factor();
+        Operand factorN;
 
         if (kind == ASTERISK || kind == MOD || kind == SLASH) {
-            if (!factor1.symbolType.usedInArithmetics()) {
+            if (!factor1.type.usedInArithmetics()) {
                 error("Cannot do arithmetic operations on '" + factor1 + "'");
             }
         }
 
         while (kind == ASTERISK || kind == MOD || kind == SLASH) {
+            TokenKind op = kind;
+
             scan();
             factorN = factor();
 
-            if (!factorN.symbolType.usedInArithmetics()) {
+            if      (op == ASTERISK) CodeBuffer.putByte(Instruction.MUL.ordinal());
+            else if (op == SLASH)    CodeBuffer.putByte(Instruction.DIV.ordinal());
+            else                     CodeBuffer.putByte(Instruction.REM.ordinal());
+
+            if (!factorN.type.usedInArithmetics()) {
                 error("Cannot do arithmetic operations on '" + factorN + "'");
             }
         }
@@ -653,23 +670,28 @@ public class Parser {
         return factor1;
     }
 
-    private static Symbol expression() {
+    private static Operand expression() {
         if (kind == MINUS) scan();
 
-        Symbol term1 = term();
-        Symbol termN;
+        Operand term1 = term();
+        Operand termN;
 
         if (kind == PLUS || kind == MINUS) {
-            if (!term1.symbolType.usedInArithmetics()) {
+            if (!term1.type.usedInArithmetics()) {
                 error("Cannot do arithmetic operations on '" + term1 + "'");
             }
         }
 
         while (kind == PLUS || kind == MINUS) {
+            TokenKind op = kind;
+
             scan();
             termN = term();
 
-            if (termN != null && !termN.symbolType.usedInArithmetics()) {
+            if (op == PLUS) CodeBuffer.putByte(Instruction.ADD.ordinal());
+            else            CodeBuffer.putByte(Instruction.SUB.ordinal());
+
+            if (!termN.type.usedInArithmetics()) {
                 error("Cannot do arithmetic operations on '" + termN + "'");
             }
         }

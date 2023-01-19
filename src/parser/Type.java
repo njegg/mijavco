@@ -18,7 +18,7 @@ public class Type {
     }
 
     public boolean usedInArithmetics() {
-        return typeKind != TypeKind.NOTYPE;
+        return typeKind != TypeKind.NOTYPE && typeKind != TypeKind.REFERENCE;
     }
 
     public boolean isStruct() {
@@ -47,6 +47,11 @@ public class Type {
 
         return true;
     }
+
+    public boolean assignableTo(Type that) {
+        return that.typeKind != TypeKind.NOTYPE && this.typeKind != TypeKind.NOTYPE && equals(that);
+    }
+
 
     @Override
     public String toString() {

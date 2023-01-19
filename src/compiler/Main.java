@@ -1,5 +1,7 @@
 package compiler;
 
+import codegen.CodeBuffer;
+import codegen.Instruction;
 import parser.Parser;
 import scanner.Scanner;
 
@@ -19,6 +21,11 @@ public class Main {
 
         if (errors > 0) {
             System.out.println("Number of errors: " + errors);
+        } else {
+            CodeBuffer.printInstructionSet();
+
+            System.out.println("\nGenerated code: ");
+            CodeBuffer.printCode();
         }
     }
 

@@ -1,0 +1,12 @@
+program P
+    int n;
+	struct N {
+	    int n;
+	}
+{
+	void main()
+	    N[] ar;
+	{
+	    ar = new int[0];
+	}
+}
