@@ -16,10 +16,10 @@ public enum Instruction {
     STORE_4("store_4"),         // 12
     STORE_5("store_5"),         // 13
     STORE("store"),             // 14
-    GETSTATIC("getstatic"),     // 15
-    PUTSTATIC("putstatic"),     // 16
-    GETFIELD("getfield"),       // 17
-    PUTFIELD("putfield"),       // 18
+    LOAD_GLOBAL("lglobal"),     // 15
+    STORE_GLOBAL("sglobal"),    // 16
+    LOAD_FIELD("lfield"),       // 17
+    STORE_FIELD("sfield"),      // 18
     CONST("const"),             // 19
     CONST_M1("const_m1"),       // 20
     CONST_0("const_0"),         // 21
@@ -38,12 +38,12 @@ public enum Instruction {
     SHR("shr"),                 // 34
     INC("inc"),                 // 35
     NEW("new"),                 // 36
-    NEWARRAY("newarray"),       // 37
-    ALOAD("aload"),             // 38
-    ASTORE("astore"),           // 39
-    BALOAD("baload"),           // 40
-    BASTORE("bastore"),         // 41
-    ARRAYLENGTH("arraylength"), // 42
+    NEW_ARRAY("newarr"),        // 37
+    ARRAY_LOAD("aload"),        // 38
+    ARRAY_STORE("astore"),      // 39
+    BARRAY_LOAD("baload"),      // 40
+    BARRAY_STORE("bastore"),    // 41
+    LENGTH("length"),           // 42
     POP("pop"),                 // 43
     DUP("dup"),                 // 44
     DUP2("dup2"),               // 45

@@ -3,6 +3,7 @@ package parser;
 import codegen.CodeBuffer;
 import codegen.Instruction;
 import codegen.Operand;
+import codegen.OperandKind;
 import compiler.Main;
 import scanner.Scanner;
 import scanner.Token;
@@ -76,7 +77,7 @@ public class Parser {
         check(IDENT);
 
         while (true) {
-            if      (kind == IDENT)  varDeclaration(false);
+            if      (kind == IDENT)  varDeclaration(true);
             else if (kind == CONST)  constDeclaration();
             else if (kind == STRUCT) structDeclaration();
             else {
@@ -99,7 +100,33 @@ public class Parser {
         check(EOF);
     }
 
-    private static Symbol varDeclaration(boolean isStructField) {
+    private static Symbol fieldDeclaration() {
+        Type fieldType = type();
+        Symbol field = null;
+
+        if (kind == LBRACE) return null;
+
+        if (kind != IDENT) {
+            error("Variable name expected, got: " + kind);
+        } else if (fieldType != null && fieldType.typeKind != TypeKind.NOTYPE) {
+            field = new Symbol(token);
+            field.name = token.text;
+            field.symbolKind = SymbolKind.VAR;
+            field.symbolType =  fieldType;
+        }
+
+        scan();
+        
+        if (kind == ASSIGN) {
+            error("You can't assign values here");
+        } else {
+            check(SEMICOLON);
+        }
+
+        return field;
+    }
+
+    private static Symbol varDeclaration(boolean isGlobal) {
         Type varType = type();
         Symbol var = null;
 
@@ -115,14 +142,7 @@ public class Parser {
             if (kind != IDENT) {
                 error("Variable name expected, got: " + kind);
             } else if (varType != null && varType.typeKind != TypeKind.NOTYPE) {
-                if (!isStructField){
-                    var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
-                } else {
-                    var = new Symbol(token);
-                    var.name = token.text;
-                    var.symbolKind = SymbolKind.VAR;
-                    var.symbolType = varType;
-                }
+                var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
             }
 
             scan();
@@ -133,6 +153,8 @@ public class Parser {
         } else {
             check(SEMICOLON);
         }
+
+        if (var != null) var.isGlobal = isGlobal;
 
         return var;
     }
@@ -237,7 +259,8 @@ public class Parser {
         switch (kind) {
             case IDENT:
                 String designatorName = token.text;
-                Symbol designator = designator();
+                Operand designatorOperand = designator();
+                Symbol designator = designatorOperand.symbol;
 
                 switch (kind) {
                     case ASSIGN:
@@ -251,6 +274,8 @@ public class Parser {
                         if (!expression.type.assignableTo(designator.symbolType)) {
                             error(String.format("Expression of type '%s' not assignable to '%s'",
                                     expression.type, designator));
+                        } else {
+                            CodeBuffer.store(designatorOperand, expression);
                         }
 
                         check(SEMICOLON);
@@ -338,7 +363,7 @@ public class Parser {
                 scan();
                 check(LPAREN);
 
-                Symbol readDesignator = designator();
+                Symbol readDesignator = designator().symbol;
                 if (readDesignator.symbolType.typeKind != TypeKind.INT && readDesignator.symbolType.typeKind != TypeKind.CHAR) {
                     error("Can only read characters and numbers, type " + readDesignator.symbolType.typeKind + " can't");
                 }
@@ -507,13 +532,18 @@ public class Parser {
         HashMap<String, Symbol> fields = new HashMap<>();
 
         while (kind == IDENT) {
-            Symbol field = varDeclaration(true);
+            Symbol field = fieldDeclaration();
             if (field != null) {
                 fields.put(field.name, field);
             }
         }
 
         if (symbol != null) {
+            int address = 0;
+            for (Symbol field : fields.values()) {
+                field.address = address++;
+            }
+
             symbol.symbolType.fields = fields;
         }
 
@@ -522,8 +552,9 @@ public class Parser {
         return symbol;
     }
 
-    private static Symbol designator() {
+    private static Operand designator() {
         Symbol designator = null;
+        Operand operand = null;
 
         check(IDENT);
         if (prevToken.kind == IDENT) {
@@ -531,8 +562,11 @@ public class Parser {
             if (designator == null) {
                 error(prevToken.text + " not in scope");
                 designator = new Symbol(token);
+            } else {
+                operand = new Operand(designator);
             }
         }
+
 
         while (kind == PERIOD || kind == LBRACK) {
             if (kind == PERIOD) {
@@ -543,9 +577,14 @@ public class Parser {
                     if (!designator.symbolType.isStruct()) {
                         error(designator + " has no accessible fields");
                     } else if (prevToken.kind == IDENT) {
-                        designator = designator.symbolType.fields.get(prevToken.text);
-                        if (designator == null) {
-                            error(String.format("Cannot find field " + prevToken.text));
+                        designator = symbolTable.findField(prevToken.text, designator.symbolType);
+
+                        if (designator == null || operand == null) {
+                            error(String.format("Error obtaining the field '" + prevToken.text + "'"));
+                        } else {
+                            CodeBuffer.load(operand);
+                            operand = new Operand(designator);
+                            operand.kind = OperandKind.CLASS_FIELD;
                         }
                     }
                 }
@@ -569,27 +608,31 @@ public class Parser {
             }
         }
 
-        return designator;
+        return operand;
     }
 
     private static Operand factor() {
         Symbol symbol = new Symbol(token);
         symbol.symbolType = new Type(TypeKind.NOTYPE);
+        Operand operand = null;
 
         switch (kind) {
             case IDENT:
-                symbol = designator();
+                operand = designator();
+                symbol = operand.symbol;
                 if (symbol.symbolKind == SymbolKind.FUNCTION) {
                     check(LPAREN);
                     actualParameters(symbolTable.find(symbol.name));
                     check(RPAREN);
                 }
+                // TODO
                 break;
 
             case CHARACTER:
                 symbol.symbolType = new Type(TypeKind.CHAR);
                 symbol.value = token.value;
                 symbol.symbolKind = SymbolKind.CONST;
+                operand = new Operand(symbol);
                 scan();
                 break;
 
@@ -597,10 +640,12 @@ public class Parser {
                 symbol.symbolType = new Type(TypeKind.INT);
                 symbol.value = token.value;
                 symbol.symbolKind = SymbolKind.CONST;
+                operand = new Operand(symbol);
                 scan();
                 break;
 
             case NEW:
+                // TODO
                 scan();
                 check(IDENT);
                 if (prevToken.kind == IDENT) {
@@ -615,6 +660,7 @@ public class Parser {
 
                 if (kind == LBRACK) {
                     scan();
+                    // TODO
                     symbol = symbolTable.find(symbol.symbolType.name + "[]");
 
                     Operand arraySize = expression();
@@ -627,6 +673,7 @@ public class Parser {
                 break;
 
             case LPAREN:
+                // TODO
                 scan();
                 expression();
                 check(RPAREN);
@@ -636,7 +683,6 @@ public class Parser {
                 error(kind + " not expected in an expression here");
         }
 
-        Operand operand = new Operand(symbol);
         CodeBuffer.load(operand);
 
         return operand;

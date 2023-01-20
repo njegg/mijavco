@@ -10,9 +10,8 @@ public class Symbol {
     public String name;
     public Type symbolType;
     public int address;
-
-    public int value;                            /* Const */
-    public boolean global;                       /* Var */
+    public boolean isGlobal;
+    public int value;
 
     public LinkedList<Symbol> parameters;        /* Function */
     public LinkedHashMap<String, Symbol> locals; /* Function */
@@ -40,11 +39,6 @@ public class Symbol {
                 );
     }
 
-    public boolean assignableTo(Symbol that) {
-        return that.symbolType.typeKind == TypeKind.NOTYPE
-                || this.symbolType.equals(that.symbolType);
-    }
-
     public Symbol copy() {
         Symbol copy = new Symbol();
         copy.symbolType = this.symbolType;
@@ -52,7 +46,7 @@ public class Symbol {
         copy.name = this.name;
         copy.parameters = this.parameters;
         copy.address = this.address;
-        copy.global = this.global;
+        copy.isGlobal = this.isGlobal;
         copy.value = this.value;
         copy.locals = this.locals;
 

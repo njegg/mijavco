@@ -36,7 +36,8 @@ public class Type {
 
         if (this.typeKind == TypeKind.REFERENCE) {
             if (this.arrayType != null) {
-                return that.arrayType != null && this.arrayType.equals(that.arrayType);
+                return that.arrayType != null &&
+                        (this.arrayType.equals(that.arrayType) || that.arrayType.typeKind == TypeKind.NOTYPE);
             } else {
                 // Compares if they have same symbols (fields) by comparing their types
                 // If fields are null, it's a special case for 'null constant'

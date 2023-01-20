@@ -1,8 +1,15 @@
 program P
+    struct P {
+        int x;
+        int y;
+    }
 {
 	void main()
 	    int i;
+	    P p;
+	    int[] a;
+	    P[] asd;
 	{
-	    i = 0 + 0 * 0 + 0;
+	    p.x = p.y * 8;
 	}
 }

@@ -8,7 +8,7 @@ import parser.TypeKind;
 public class Operand {
     public OperandKind kind;
     public Type type;
-    public Symbol function;
+    public Symbol symbol;
 
     public int value;
     public int address;
@@ -25,22 +25,17 @@ public class Operand {
                 break;
 
             case VAR:
-                kind = symbol.global ? OperandKind.GLOBAL : OperandKind.LOCAL;
+                kind = symbol.isGlobal ? OperandKind.GLOBAL : OperandKind.LOCAL;
                 break;
 
             case FUNCTION:
                 kind = OperandKind.FUNCTION;
-                function = symbol;
                 break;
 
             default:
                 Parser.error("Cannot read operand, symbol of kind " + symbol.symbolKind + " unexpected");
         }
-    }
 
-    public Operand(int constantValue) {
-        type = new Type(TypeKind.INT);
-        kind = OperandKind.CONSTANT;
-        value = constantValue;
+        this.symbol = symbol;
     }
 }

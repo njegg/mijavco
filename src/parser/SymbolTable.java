@@ -10,6 +10,9 @@ public class SymbolTable {
     private Scope scope;
     private boolean nextScopeIsLoop;
 
+    private int nextGlobalAddress = 0;
+    private int nextLocalAddress = 0;
+
     public SymbolTable() {
         scope = new Scope(false);
         rootScope = scope;
@@ -46,11 +49,14 @@ public class SymbolTable {
         itoc.parameters.addLast(insert("i", SymbolKind.VAR, new Type(TypeKind.INT), null));
         closeScope();
 
-        // TODO garbage solution
         Symbol len = insert("len", SymbolKind.FUNCTION, new Type(TypeKind.INT), null);
         openScope(len);
         len.parameters = new LinkedList<>();
-        len.parameters.addLast(insert("arr", SymbolKind.VAR, new Type(TypeKind.NOTYPE), null));
+        Type paramType = new Type(TypeKind.REFERENCE);
+        paramType.arrayType = new Type(TypeKind.NOTYPE);
+        paramType.name = "ref[]";
+        len.parameters.addLast(insert("__arr", SymbolKind.VAR, paramType, null));
+
         closeScope();
     }
 
@@ -67,6 +73,10 @@ public class SymbolTable {
     }
 
     public void closeScope() {
+        if (scope.function != null) {
+            nextLocalAddress = 0;
+        }
+
         scope = scope.outer;
     }
 
@@ -81,6 +91,9 @@ public class SymbolTable {
         symbol.symbolType = type;
         symbol.name = name;
         symbol.symbolKind = kind;
+        symbol.isGlobal = scope.function == null;
+
+        symbol.address = symbol.isGlobal ? nextGlobalAddress++ : nextLocalAddress++;
 
         scope.locals.put(name, symbol);
 
@@ -100,7 +113,7 @@ public class SymbolTable {
     }
 
     public Symbol findField(String name, Type type) {
-        return null;
+        return type.fields.getOrDefault(name, null);
     }
 
     public Symbol getScopeFunction() {

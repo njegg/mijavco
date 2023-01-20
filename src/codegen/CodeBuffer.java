@@ -1,5 +1,7 @@
 package codegen;
 
+import parser.Parser;
+
 import static codegen.Instruction.*;
 
 public class CodeBuffer {
@@ -52,17 +54,70 @@ public class CodeBuffer {
                 break;
 
             case LOCAL:
+                int address = operand.address;
+
+                if (address >= 0 && address <= 5) {
+                    putByte(LOAD_0.ordinal() + address);
+                } else {
+                    putByte(LOAD.ordinal());
+                    putWord(operand.address);
+                }
+
                 break;
+
             case GLOBAL:
+                putByte(LOAD_GLOBAL.ordinal());
+                putWord(operand.address);
                 break;
-            case STACK:
+
+            case ESTACK:
                 break;
+
             case CLASS_FIELD:
+                putByte(LOAD_FIELD.ordinal());
+                putWord(operand.address);
                 break;
+
             case ARRAY_ELEMENT:
                 break;
             case FUNCTION:
                 break;
+        }
+
+        operand.kind = OperandKind.ESTACK;
+    }
+
+    public static void store(Operand location, Operand operand) {
+        int address;
+
+        switch (location.kind) {
+            case LOCAL:
+                address = location.address;
+                if (address >= 0 && address <= 5) {
+                    putByte(STORE_0.ordinal() + address);
+                } else {
+                    putByte(STORE.ordinal());
+                    putWord(address);
+                }
+
+                break;
+
+            case GLOBAL:
+                putByte(STORE_GLOBAL.ordinal());
+                putWord(location.address);
+                break;
+
+            case CLASS_FIELD:
+                putByte(STORE_FIELD.ordinal());
+                putWord(location.address);
+                break;
+
+            case ARRAY_ELEMENT:
+                putByte(ARRAY_STORE.ordinal());
+                break;
+
+            default:
+                Parser.error("??" + location.kind);
         }
     }
 }
