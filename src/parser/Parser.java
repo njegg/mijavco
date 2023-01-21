@@ -589,6 +589,10 @@ public class Parser {
                     }
                 }
             } else {
+                if (operand != null) {
+                    CodeBuffer.load(operand); // Load the pointer to array before expression loads index
+                }
+
                 scan();
                 Operand expression = expression();
 
@@ -601,6 +605,11 @@ public class Parser {
                         Type arrayType = designator.symbolType.arrayType;
                         designator = designator.copy();
                         designator.symbolType = arrayType;
+
+                        CodeBuffer.load(expression); // Load index
+
+                        operand = new Operand(designator);
+                        operand.kind = OperandKind.ARRAY_ELEMENT;
                     }
                 }
 
@@ -683,7 +692,7 @@ public class Parser {
                 error(kind + " not expected in an expression here");
         }
 
-        CodeBuffer.load(operand);
+        if (operand != null) CodeBuffer.load(operand);
 
         return operand;
     }

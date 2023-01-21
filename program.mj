@@ -7,9 +7,8 @@ program P
 	void main()
 	    int i;
 	    P p;
-	    int[] a;
-	    P[] asd;
+	    int[] arr;
 	{
-	    p.x = p.y * 8;
+	    arr[p.x * 8] = i;
 	}
 }
