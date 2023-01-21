@@ -26,6 +26,8 @@ public class Main {
 
             System.out.println("\nGenerated code: ");
             CodeBuffer.printCode();
+
+            System.out.println("\n" + CodeBuffer.pc);
         }
     }
 

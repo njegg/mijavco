@@ -7,11 +7,11 @@ import static codegen.Instruction.*;
 public class CodeBuffer {
     private static final byte[] buffer = new byte[3000];
 
-    public static int size = 0;
+    public static int pc = 0;
     public static int mainStart;
 
     public static void printCode() {
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < pc; i++)
             System.out.print(buffer[i] + " ");
 
         System.out.println();
@@ -24,7 +24,7 @@ public class CodeBuffer {
     }
 
     public static void putByte(int x) {
-        buffer[size++] = (byte)x;
+        buffer[pc++] = (byte)x;
     }
 
     public static void putShort(int x) {
@@ -32,10 +32,20 @@ public class CodeBuffer {
         putByte(x);
     }
 
+    public static void putShort(int x, int address) {
+        buffer[address] = (byte) (x >> 8);
+        buffer[address + 1] = (byte) x;
+    }
+
     public static void putWord(int x) {
         putShort(x >> 16);
         putShort(x);
     }
+
+    public static int getShort(int address) {
+        return buffer[address] << 8 + buffer[address + 1];
+    }
+
 
     public static void load(Operand operand) {
         if (operand.kind == null) return;

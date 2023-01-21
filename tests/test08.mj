@@ -1,0 +1,17 @@
+program P
+    struct P {
+        int x;
+        int y;
+        int[] a;
+    }
+{
+	void main()
+	    int[] a;
+	    char[] c;
+	    P p;
+	{
+	    p = new P;
+        a = new int[2];
+        c = new char[34];
+	}
+}
