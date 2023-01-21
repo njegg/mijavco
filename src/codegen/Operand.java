@@ -3,7 +3,6 @@ package codegen;
 import parser.Parser;
 import parser.Symbol;
 import parser.Type;
-import parser.TypeKind;
 
 public class Operand {
     public OperandKind kind;
@@ -30,6 +29,9 @@ public class Operand {
 
             case FUNCTION:
                 kind = OperandKind.FUNCTION;
+                break;
+
+            case TYPE:
                 break;
 
             default:

@@ -2,13 +2,16 @@ program P
     struct P {
         int x;
         int y;
+        int[] a;
     }
 {
 	void main()
-	    int i;
+	    int[] a;
+	    char[] c;
 	    P p;
-	    int[] arr;
 	{
-	    arr[p.x * 8] = i;
+	    p = new P;
+        a = new int[2];
+        c = new char[34];
 	}
 }

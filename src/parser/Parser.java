@@ -654,31 +654,41 @@ public class Parser {
                 break;
 
             case NEW:
-                // TODO
                 scan();
-                check(IDENT);
-                if (prevToken.kind == IDENT) {
-                    symbol = symbolTable.find(prevToken.text);
+                if (kind == IDENT) {
+                    symbol = symbolTable.find(token.text);
                     if (symbol == null) {
-                        error(prevToken.text + " not in scope");
+                        error(token.text + " not in scope");
                         symbol = new Symbol(token);
                     } else if (symbol.symbolKind != SymbolKind.TYPE) {
-                        error(prevToken.text + " is not a type");
+                        error(token.text + " is not a type");
                     }
                 }
 
+                scan();
+
                 if (kind == LBRACK) {
                     scan();
-                    // TODO
-                    symbol = symbolTable.find(symbol.symbolType.name + "[]");
 
-                    Operand arraySize = expression();
+                    Operand arraySize = expression(); // Will load the index to CodeBuffer
                     if (arraySize.type.typeKind != TypeKind.INT) {
                         error("Expression of type " + TypeKind.INT + " expected");
                     }
 
+                    CodeBuffer.putByte(Instruction.NEW_ARRAY.ordinal());
+                    CodeBuffer.putByte(symbol.symbolType.name.equals("char") ? 0 : 1);
+
+                    symbol = symbolTable.find(symbol.symbolType.name + "[]");
+
+                    operand = new Operand(symbol);
+
                     check(RBRACK);
+                } else {
+                    CodeBuffer.putByte(Instruction.NEW.ordinal());
+                    CodeBuffer.putWord(symbol.symbolType.fields.size());
+                    operand = new Operand(symbol);
                 }
+
                 break;
 
             case LPAREN:
