@@ -1,9 +1,6 @@
 package parser;
 
-import codegen.CodeBuffer;
-import codegen.Instruction;
-import codegen.Operand;
-import codegen.OperandKind;
+import codegen.*;
 import compiler.Main;
 import scanner.Scanner;
 import scanner.Token;
@@ -72,6 +69,7 @@ public class Parser {
         }
     }
 
+
     private static void mijava() {
         check(PROGRAM);
         check(IDENT);
@@ -100,65 +98,6 @@ public class Parser {
         check(EOF);
     }
 
-    private static Symbol fieldDeclaration() {
-        Type fieldType = type();
-        Symbol field = null;
-
-        if (kind == LBRACE) return null;
-
-        if (kind != IDENT) {
-            error("Variable name expected, got: " + kind);
-        } else if (fieldType != null && fieldType.typeKind != TypeKind.NOTYPE) {
-            field = new Symbol(token);
-            field.name = token.text;
-            field.symbolKind = SymbolKind.VAR;
-            field.symbolType =  fieldType;
-        }
-
-        scan();
-        
-        if (kind == ASSIGN) {
-            error("You can't assign values here");
-        } else {
-            check(SEMICOLON);
-        }
-
-        return field;
-    }
-
-    private static Symbol varDeclaration(boolean isGlobal) {
-        Type varType = type();
-        Symbol var = null;
-
-        // If block start is reached, exit immediately, so it's not skipped
-        // with rest of check()'s
-        // After this method there is usually a loop that jumps to
-        // start of the block on error and will not find it if it is entered now
-        if (kind == LBRACE) return null;
-
-        do {
-            if (kind == COMMA) scan();
-
-            if (kind != IDENT) {
-                error("Variable name expected, got: " + kind);
-            } else if (varType != null && varType.typeKind != TypeKind.NOTYPE) {
-                var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
-            }
-
-            scan();
-        } while (kind == COMMA);
-
-        if (kind == ASSIGN) {
-            error("You can't assign values here");
-        } else {
-            check(SEMICOLON);
-        }
-
-        if (var != null) var.isGlobal = isGlobal;
-
-        return var;
-    }
-
     private static Type type() {
         Type type = null;
         String name = token.text;
@@ -183,10 +122,10 @@ public class Parser {
                 Symbol symbol = symbolTable.find(typeName);
                 if (symbol == null) {
                     symbol = symbolTable.insert(
-                                typeName,
-                                SymbolKind.TYPE,
-                                new Type(TypeKind.REFERENCE),
-                                token
+                            typeName,
+                            SymbolKind.TYPE,
+                            new Type(TypeKind.REFERENCE),
+                            token
                     );
 
                     symbol.symbolType.arrayType = type;
@@ -202,7 +141,39 @@ public class Parser {
         return type;
     }
 
-    private static Symbol constDeclaration() {
+    private static void varDeclaration(boolean isGlobal) {
+        Type varType = type();
+        Symbol var = null;
+
+        // If block start is reached, exit immediately, so it's not skipped
+        // with rest of check()'s
+        // After this method there is usually a loop that jumps to
+        // start of the block on error and will not find it if it is entered now
+        if (kind == LBRACE) return;
+
+        do {
+            if (kind == COMMA) scan();
+
+            if (kind != IDENT) {
+                error("Variable name expected, got: " + kind);
+            } else if (varType != null && varType.typeKind != TypeKind.NOTYPE) {
+                var = symbolTable.insert(token.text, SymbolKind.VAR, varType, token);
+            }
+
+            scan();
+        } while (kind == COMMA);
+
+        if (kind == ASSIGN) {
+            error("You can't assign values here");
+        } else {
+            check(SEMICOLON);
+        }
+
+        if (var != null) var.isGlobal = isGlobal;
+
+    }
+
+    private static void constDeclaration() {
         check(CONST);
         Type type = type();
         Symbol symbol = null;
@@ -224,8 +195,181 @@ public class Parser {
         scan();
         check(SEMICOLON);
 
-        return symbol;
     }
+
+    private static void structDeclaration() {
+        Symbol symbol = null;
+
+        check(STRUCT);
+
+        if (kind != IDENT) {
+            error("struct identifier expected");
+        } else {
+            Type newType = new Type(TypeKind.REFERENCE);
+            newType.name = token.text;
+            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, newType, token);
+
+            Type newArrType = new Type(TypeKind.REFERENCE);
+            newArrType.name = newType.name + "[]";
+            newArrType.arrayType = newType;
+            symbolTable.insert(newArrType.name, SymbolKind.TYPE, newArrType, null);
+        }
+
+        scan();
+        check(LBRACE);
+
+        HashMap<String, Symbol> fields = new HashMap<>();
+
+        while (kind == IDENT) {
+            Symbol field = fieldDeclaration();
+            if (field != null) {
+                fields.put(field.name, field);
+            }
+        }
+
+        if (symbol != null) {
+            int address = 0;
+            for (Symbol field : fields.values()) {
+                field.address = address++;
+            }
+
+            symbol.symbolType.fields = fields;
+        }
+
+        check(RBRACE);
+
+    }
+
+    private static Symbol fieldDeclaration() {
+        Type fieldType = type();
+        Symbol field = null;
+
+        if (kind == LBRACE) return null;
+
+        if (kind != IDENT) {
+            error("Variable name expected, got: " + kind);
+        } else if (fieldType != null && fieldType.typeKind != TypeKind.NOTYPE) {
+            field = new Symbol(token);
+            field.name = token.text;
+            field.symbolKind = SymbolKind.VAR;
+            field.symbolType =  fieldType;
+        }
+
+        scan();
+
+        if (kind == ASSIGN) {
+            error("You can't assign values here");
+        } else {
+            check(SEMICOLON);
+        }
+
+        return field;
+    }
+
+
+    private static void function() {
+        Type functionType = new Type(TypeKind.NOTYPE);
+        Symbol function = new Symbol(token);
+
+        if      (kind == VOID)  scan();
+        else if (kind == IDENT) functionType = type();
+        else                    error("Function return type expected, got: " + kind);
+
+        if (kind != IDENT) {
+            error("Function name expected, got" + kind);
+        } else {
+            function = symbolTable.insert(token.text, SymbolKind.FUNCTION, functionType, token);
+        }
+
+        scan();
+
+        check(LPAREN);
+        symbolTable.openScope(function);
+        function.parameters = formalParameters();
+        check(RPAREN);
+
+        if (kind != IDENT && kind != LBRACE) {
+            error(kind + " not allowed in here");
+        }
+
+        while (kind == IDENT)
+            varDeclaration(false);
+
+        /* If there was an error, skip to start of the block */
+        while (kind != LBRACE && kind != EOF)
+            scan();
+
+        block();
+
+        symbolTable.closeScope();
+
+    }
+
+    private static void actualParameters(Symbol function) {
+        if (function.symbolKind == SymbolKind.FUNCTION && function.parameters.size() > 0 && kind == RPAREN) {
+            error("Parameters expected: " +
+                    function.parameters.stream().map(s -> s.symbolType.name).collect(Collectors.toList()));
+            return;
+        } else if (kind == RPAREN) {
+            return;
+        }
+
+        Iterator<Symbol> formalParameters = function.parameters.iterator();
+        Symbol parameter;
+        Operand expression;
+
+        do {
+            if (kind == COMMA) scan();
+
+            expression = expression();
+
+            if (formalParameters.hasNext()) {
+                parameter = formalParameters.next();
+
+                if (!expression.type.assignableTo(parameter.symbolType)) {
+                    error(String.format("Parameter types do not match, expected %s but got %s",
+                            parameter.symbolType.name,
+                            expression.type.name));
+                }
+            } else {
+                error(String.format("Too manny parameters provided, function %s requires %d with types: %s",
+                        function.name, function.parameters.size(), function.parameters));
+            }
+
+        } while(kind == COMMA);
+    }
+
+    private static LinkedList<Symbol> formalParameters() {
+        LinkedList<Symbol> params = new LinkedList<>();
+
+        if (kind == RPAREN) return params;
+
+        do {
+            if (kind == COMMA) scan();
+
+            Type paramType = type();
+
+            if (kind == IDENT) {
+                Symbol param = symbolTable.insert(token.text, SymbolKind.VAR, paramType, token);
+
+                if (param != null) {
+                    params.addLast(param);
+                } else {
+                    Symbol dummy = new Symbol(); // For error checking later in the program
+                    dummy.symbolType = paramType;
+                    params.addLast(dummy);
+                }
+            } else if (kind != COMMA && kind != RPAREN) {
+                error(String.format("%s not expected here, expected tokens: %s, %s",
+                        kind, COMMA, RPAREN));
+            }
+
+            scan();
+        } while (kind == COMMA);
+
+        return params;
+    }
+
 
     private static void block() {
         /* Print new errors on block enter */
@@ -341,9 +485,16 @@ public class Parser {
             case IF:
                 scan();
                 check(LPAREN);
-                condition();
+                Operand ifCondition = condition();
                 check(RPAREN);
+
+                CodeBuffer.falseJump(ifCondition);
+                ifCondition.trueLabel.here();
+
                 statement();
+
+                ifCondition.falseLabel.here();
+
                 if (kind == ELSE) {
                     scan();
                     statement();
@@ -404,154 +555,6 @@ public class Parser {
         }
     }
 
-    private static void actualParameters(Symbol function) {
-        if (function.symbolKind == SymbolKind.FUNCTION && function.parameters.size() > 0 && kind == RPAREN) {
-            error("Parameters expected: " +
-                    function.parameters.stream().map(s -> s.symbolType.name).collect(Collectors.toList()));
-            return;
-        } else if (kind == RPAREN) {
-            return;
-        }
-
-        Iterator<Symbol> formalParameters = function.parameters.iterator();
-        Symbol parameter;
-        Operand expression;
-
-        do {
-            if (kind == COMMA) scan();
-
-            expression = expression();
-
-            if (formalParameters.hasNext()) {
-                parameter = formalParameters.next();
-
-                if (!expression.type.assignableTo(parameter.symbolType)) {
-                    error(String.format("Parameter types do not match, expected %s but got %s",
-                            parameter.symbolType.name,
-                            expression.type.name));
-                }
-            } else {
-                error(String.format("Too manny parameters provided, function %s requires %d with types: %s",
-                        function.name, function.parameters.size(), function.parameters));
-            }
-
-        } while(kind == COMMA);
-    }
-
-    private static LinkedList<Symbol> formalParameters() {
-        LinkedList<Symbol> params = new LinkedList<>();
-
-        if (kind == RPAREN) return params;
-
-        do {
-            if (kind == COMMA) scan();
-
-            Type paramType = type();
-
-            if (kind == IDENT) {
-                Symbol param = symbolTable.insert(token.text, SymbolKind.VAR, paramType, token);
-
-                if (param != null) {
-                    params.addLast(param);
-                } else {
-                    Symbol dummy = new Symbol(); // For error checking later in the program
-                    dummy.symbolType = paramType;
-                    params.addLast(dummy);
-                }
-            } else if (kind != COMMA && kind != RPAREN) {
-                error(String.format("%s not expected here, expected tokens: %s, %s",
-                        kind, COMMA, RPAREN));
-            }
-
-            scan();
-        } while (kind == COMMA);
-
-        return params;
-    }
-
-    private static Symbol function() {
-        Type functionType = new Type(TypeKind.NOTYPE);
-        Symbol function = new Symbol(token);
-
-        if      (kind == VOID)  scan();
-        else if (kind == IDENT) functionType = type();
-        else                    error("Function return type expected, got: " + kind);
-
-        if (kind != IDENT) {
-            error("Function name expected, got" + kind);
-        } else {
-            function = symbolTable.insert(token.text, SymbolKind.FUNCTION, functionType, token);
-        }
-
-        scan();
-
-        check(LPAREN);
-        symbolTable.openScope(function);
-        function.parameters = formalParameters();
-        check(RPAREN);
-
-        if (kind != IDENT && kind != LBRACE) {
-            error(kind + " not allowed in here");
-        }
-
-        while (kind == IDENT)
-            varDeclaration(false);
-
-        /* If there was an error, skip to start of the block */
-        while (kind != LBRACE && kind != EOF)
-            scan();
-
-        block();
-
-        symbolTable.closeScope();
-
-        return function;
-    }
-
-    private static Symbol structDeclaration() {
-        Symbol symbol = null;
-
-        check(STRUCT);
-
-        if (kind != IDENT) {
-            error("struct identifier expected");
-        } else {
-            Type newType = new Type(TypeKind.REFERENCE);
-            newType.name = token.text;
-            symbol = symbolTable.insert(token.text, SymbolKind.TYPE, newType, token);
-
-            Type newArrType = new Type(TypeKind.REFERENCE);
-            newArrType.name = newType.name + "[]";
-            newArrType.arrayType = newType;
-            symbolTable.insert(newArrType.name, SymbolKind.TYPE, newArrType, null);
-        }
-
-        scan();
-        check(LBRACE);
-
-        HashMap<String, Symbol> fields = new HashMap<>();
-
-        while (kind == IDENT) {
-            Symbol field = fieldDeclaration();
-            if (field != null) {
-                fields.put(field.name, field);
-            }
-        }
-
-        if (symbol != null) {
-            int address = 0;
-            for (Symbol field : fields.values()) {
-                field.address = address++;
-            }
-
-            symbol.symbolType.fields = fields;
-        }
-
-        check(RBRACE);
-
-        return symbol;
-    }
-
     private static Operand designator() {
         Symbol designator = null;
         Operand operand = null;
@@ -562,11 +565,9 @@ public class Parser {
             if (designator == null) {
                 error(prevToken.text + " not in scope");
                 designator = new Symbol(token);
-            } else {
-                operand = new Operand(designator);
             }
+            operand = new Operand(designator);
         }
-
 
         while (kind == PERIOD || kind == LBRACK) {
             if (kind == PERIOD) {
@@ -579,7 +580,7 @@ public class Parser {
                     } else if (prevToken.kind == IDENT) {
                         designator = symbolTable.findField(prevToken.text, designator.symbolType);
 
-                        if (designator == null || operand == null) {
+                        if (designator == null) {
                             error(String.format("Error obtaining the field '" + prevToken.text + "'"));
                         } else {
                             CodeBuffer.load(operand);
@@ -764,35 +765,51 @@ public class Parser {
         return term1;
     }
 
-    private static void conditionFactor() {
+
+    private static Operand conditionFactor() {
         expression();
 
-        if (kind == EQ  ||
-            kind == NEQ ||
-            kind == GRE ||
-            kind == GEQ ||
-            kind == LES ||
-            kind == LEQ ) {
-            scan();
-            expression();
+        switch (kind) {
+            case EQ: case GE: case GT: case LT: case LE: case NE:
+                Operand operand = new Operand(kind);
+                scan();
+                expression();
+                return operand;
+
+            default:
+                CodeBuffer.load(new Operand(0)); // if (a) -> if (a != 0) -> load a; const_0; jeq 0
+                return new Operand(NE);
         }
     }
 
-    private static void conditionTerm() {
-        conditionFactor();
+    private static Operand conditionTerm() {
+        Operand operand = conditionFactor();
+
 
         while (kind == AND) {
+            CodeBuffer.falseJump(operand); // if one factor is false, lazily skip the whole term
+
             scan();
-            conditionFactor();
+            operand.condition = conditionFactor().condition;
         }
+
+        return operand;
     }
 
-    private static void condition() {
-        conditionTerm();
+    private static Operand condition() {
+        Operand prev = conditionTerm();
 
         while (kind == OR) {
+            CodeBuffer.trueJump(prev); // If one is term is true, while condition is true
+            prev.falseLabel.here(); // a && b || c - if a was false, c is the place to jump (here)
+
             scan();
-            conditionTerm();
+            Operand curr = conditionTerm();
+
+            prev.condition = curr.condition;
+            prev.falseLabel = curr.falseLabel;
         }
+
+        return prev;
     }
 }

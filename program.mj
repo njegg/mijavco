@@ -1,12 +1,12 @@
 program P
 {
 	void main()
-	    int a, b;
+	    int a, b, c;
 	{
-	    if (a > b) {
-	        a = 0;
-	    }
+        if (a && b && c || a > b) {
+            a = 0;
+        }
 
-	    a = 2;
+        a = 1;
 	}
 }

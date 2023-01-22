@@ -1,5 +1,7 @@
 package parser;
 
+import codegen.CodeBuffer;
+import codegen.Operand;
 import scanner.Token;
 
 import java.util.LinkedList;
@@ -10,7 +12,7 @@ public class SymbolTable {
     private Scope scope;
     private boolean nextScopeIsLoop;
 
-    private int nextGlobalAddress = 0;
+    private int nextGlobalAddress = 1;
     private int nextLocalAddress = 0;
 
     public SymbolTable() {

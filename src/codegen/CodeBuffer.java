@@ -19,7 +19,7 @@ public class CodeBuffer {
 
     public static void printInstructionSet() {
         for (Instruction i : Instruction.values()) {
-            System.out.println(String.format("%-12s %d", i.niceName, i.ordinal()));
+            System.out.printf("%-12s %d%n", i.niceName, i.ordinal());
         }
     }
 
@@ -43,7 +43,7 @@ public class CodeBuffer {
     }
 
     public static int getShort(int address) {
-        return buffer[address] << 8 + buffer[address + 1];
+        return (buffer[address] << 8) + buffer[address + 1];
     }
 
 
@@ -88,6 +88,10 @@ public class CodeBuffer {
                 putWord(operand.address);
                 break;
 
+            case CONDITION:
+                putByte(operand.condition.jumpInstruction.ordinal());
+                break;
+
             case ARRAY_ELEMENT:
                 break;
             case FUNCTION:
@@ -129,5 +133,20 @@ public class CodeBuffer {
             default:
                 Parser.error("??" + location.kind);
         }
+    }
+
+    public static void trueJump(Operand condOperand) {
+        putByte(condOperand.condition.jumpInstruction.ordinal());
+        condOperand.trueLabel.put();
+    }
+
+    public static void falseJump(Operand condOperand) {
+        putByte(condOperand.condition.inverseJumpInstruction().ordinal());
+        condOperand.falseLabel.put();
+    }
+
+    public static void jump(Label label) {
+        putByte(JMP.ordinal());
+        label.put();
     }
 }

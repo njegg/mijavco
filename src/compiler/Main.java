@@ -27,7 +27,7 @@ public class Main {
             System.out.println("\nGenerated code: ");
             CodeBuffer.printCode();
 
-            System.out.println("\n" + CodeBuffer.pc);
+            System.out.printf("\nSize: %d bytes\n", CodeBuffer.pc);
         }
     }
 

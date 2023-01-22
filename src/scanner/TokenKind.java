@@ -1,5 +1,8 @@
 package scanner;
 
+/*
+ * Do not change order
+ */
 public enum TokenKind {
     IDENT("identifier"),
     NUMBER("number literal"),
@@ -12,11 +15,11 @@ public enum TokenKind {
     MOD("'%'"),
 
     EQ("'=='"),
-    NEQ("'!='"),
-    LES("'<'"),
-    LEQ("'<='"),
-    GRE("'>'"),
-    GEQ("'>='"),
+    NE("'!='"),
+    LT("'<'"),
+    LE("'<='"),
+    GT("'>'"),
+    GE("'>='"),
     AND("&&"),
     OR("||"),
 

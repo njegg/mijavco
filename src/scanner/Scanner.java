@@ -238,27 +238,27 @@ public class Scanner {
             case '>':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = GEQ;
+                    token.kind = GE;
                     nextChar();
                 } else {
-                    token.kind = GRE;
+                    token.kind = GT;
                 }
                 break;
 
             case '<':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = LEQ;
+                    token.kind = LE;
                     nextChar();
                 } else {
-                    token.kind = LES;
+                    token.kind = LT;
                 }
                 break;
 
             case '!':
                 nextChar();
                 if (ch == '=') {
-                    token.kind = NEQ;
+                    token.kind = NE;
                     nextChar();
                 } else {
                     error("'=' expected after '!'", token);

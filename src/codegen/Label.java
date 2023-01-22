@@ -1,7 +1,5 @@
 package codegen;
 
-import parser.Parser;
-
 public class Label {
     private int address;
     private boolean defined;
@@ -22,7 +20,7 @@ public class Label {
         }
     }
 
-    public void resolve() {
+    public void here() {
         if (defined) {
             System.err.println("Internal Compiler Error");
             System.exit(1);

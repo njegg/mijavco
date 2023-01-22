@@ -48,16 +48,21 @@ public enum Instruction {
     DUP("dup"),                 // 44
     DUP2("dup2"),               // 45
     JMP("jmp"),                 // 46
-    JCC("jcc"),                 // 47
-    CALL("call"),               // 48
-    RETURN("return"),           // 49
-    ENTER("enter"),             // 50
-    EXIT("exit"),               // 51
-    READ("read"),               // 52
-    PRINT("print"),             // 53
-    BREAD("bread"),             // 54
-    BPRINT("bprint"),           // 55
-    TRAP("trap");               // 56
+    JEQ("jeq"),                 // 47
+    JNE("jne"),                 // 48
+    JGT("jgt"),                 // 49
+    JLE("jle"),                 // 50
+    JLT("jlt"),                 // 51
+    JGE("jge"),                 // 52
+    CALL("call"),               // 53
+    RETURN("return"),           // 54
+    ENTER("enter"),             // 55
+    EXIT("exit"),               // 56
+    READ("read"),               // 57
+    PRINT("print"),             // 58
+    BREAD("bread"),             // 59
+    BPRINT("bprint"),           // 60
+    TRAP("trap");               // 61
 
     Instruction(String niceName) {
         this.niceName = niceName;
