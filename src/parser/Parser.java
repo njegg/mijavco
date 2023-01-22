@@ -499,15 +499,25 @@ public class Parser {
                     scan();
                     statement();
                 }
+
                 break;
 
             case WHILE:
                 scan();
+                Label whileTop = new Label();           // If true, this is where it should return after statements
+                whileTop.here();
                 check(LPAREN);
-                condition();
+                Operand whileCondition = condition();
                 check(RPAREN);
-                symbolTable.setNextScopeIsLoop();
+
+                CodeBuffer.falseJump(whileCondition);   // If false, jump forward somewhere
+
+                symbolTable.setNextScopeIsLoop();       // TODO: This wont work for non block statement ?
                 statement();
+
+                CodeBuffer.jump(whileTop);              // If it was true, go to top of while
+                whileCondition.falseLabel.here();       // If false, this is where to jump
+
                 break;
 
             case READ:

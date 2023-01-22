@@ -11,9 +11,41 @@ public class CodeBuffer {
     public static int mainStart;
 
     public static void printCode() {
-        for (int i = 0; i < pc; i++)
-            System.out.print(buffer[i] + " ");
+        var instructions = Instruction.values();
 
+        int i = 0;
+        while (i < pc) {
+            Instruction instruction = instructions[buffer[i]];
+            System.out.printf("%-20s", instruction.niceName);
+
+            int iSize = instruction.size;
+            if (iSize > 1) {
+                int paramValue = 0;
+
+                int j = i + 1;
+                while (j < i + iSize) {
+                    int b = buffer[j];
+                    System.out.printf("%03d ", b);
+
+                    paramValue <<= 8;
+                    paramValue |= b;
+
+                    j++;
+                }
+
+                System.out.printf("(%d)", paramValue);
+            }
+
+            i += instruction.size;
+
+            System.out.println();
+        }
+    }
+
+    public static void dump() {
+        for (int i = 0; i < pc; i++) {
+            System.out.printf("%d ", buffer[i]);
+        }
         System.out.println();
     }
 
@@ -22,6 +54,7 @@ public class CodeBuffer {
             System.out.printf("%-12s %d%n", i.niceName, i.ordinal());
         }
     }
+
 
     public static void putByte(int x) {
         buffer[pc++] = (byte)x;

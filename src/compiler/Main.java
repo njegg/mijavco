@@ -22,10 +22,12 @@ public class Main {
         if (errors > 0) {
             System.out.println("Number of errors: " + errors);
         } else {
-            CodeBuffer.printInstructionSet();
-
-            System.out.println("\nGenerated code: ");
+//            CodeBuffer.printInstructionSet();
+            System.out.println("\nGenerated code: \n");
             CodeBuffer.printCode();
+
+            System.out.println("\nDump:");
+            CodeBuffer.dump();
 
             System.out.printf("\nSize: %d bytes\n", CodeBuffer.pc);
         }

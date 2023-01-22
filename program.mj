@@ -3,9 +3,11 @@ program P
 	void main()
 	    int a, b, c;
 	{
-        if (a && b && c || a > b) {
-            a = 0;
-        }
+	    a = 10;
+
+	    while (a) {
+	        a--;
+	    }
 
         a = 1;
 	}
