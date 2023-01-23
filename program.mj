@@ -1,7 +1,5 @@
 program P
 {
-    void f() {}
-
     int one() { return 1; }
 
 	void main()

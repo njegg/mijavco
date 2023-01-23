@@ -24,6 +24,8 @@ public class Main {
             System.out.println("Number of errors: " + errors);
         } else {
             CodeBuffer.printCode();
+            System.out.println();
+
             System.out.print("Dump: ");
             CodeBuffer.dump();
 
