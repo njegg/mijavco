@@ -12,7 +12,7 @@ public class SymbolTable {
     private Scope scope;
     private boolean nextScopeIsLoop;
 
-    private int nextGlobalAddress = 1;
+    private int nextGlobalAddress = 0;
     private int nextLocalAddress = 0;
 
     public SymbolTable() {
@@ -44,12 +44,14 @@ public class SymbolTable {
         ctoi.parameters = new LinkedList<>();
         ctoi.parameters.addLast(insert("c", SymbolKind.VAR, new Type(TypeKind.CHAR), null));
         closeScope();
+        ctoi.address = -1;
 
         Symbol itoc = insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.CHAR), null);
         openScope(itoc);
         itoc.parameters = new LinkedList<>();
         itoc.parameters.addLast(insert("i", SymbolKind.VAR, new Type(TypeKind.INT), null));
         closeScope();
+        itoc.address = -1;
 
         Symbol len = insert("len", SymbolKind.FUNCTION, new Type(TypeKind.INT), null);
         openScope(len);
@@ -58,6 +60,7 @@ public class SymbolTable {
         paramType.arrayType = new Type(TypeKind.NOTYPE);
         paramType.name = "ref[]";
         len.parameters.addLast(insert("__arr", SymbolKind.VAR, paramType, null));
+        len.address = -1;
 
         closeScope();
     }
@@ -95,7 +98,9 @@ public class SymbolTable {
         symbol.symbolKind = kind;
         symbol.isGlobal = scope.function == null;
 
-        symbol.address = symbol.isGlobal ? nextGlobalAddress++ : nextLocalAddress++;
+        if (symbol.symbolKind == SymbolKind.CONST || symbol.symbolKind == SymbolKind.VAR) {
+            symbol.address = symbol.isGlobal ? nextGlobalAddress++ : nextLocalAddress++;
+        }
 
         scope.locals.put(name, symbol);
 
@@ -121,8 +126,21 @@ public class SymbolTable {
     public Symbol getScopeFunction() {
         return scope.getFunction();
     }
+
     public void setNextScopeIsLoop() { nextScopeIsLoop = true; }
+
     public boolean isScopeLoop() { return scope.isLoop(); }
 
+    public int numberOfLocals() { return scope.locals.size(); }
+
     public void dump() { rootScope.print(); }
+
+    public String getFunctionNameByAddress(int address) {
+        return rootScope.locals.values()
+                .stream()
+                .filter(s -> s.symbolKind == SymbolKind.FUNCTION && s.address == address)
+                .findFirst()
+                .map(s -> s.name)
+                .orElseThrow();
+    }
 }

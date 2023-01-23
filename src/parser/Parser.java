@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import static scanner.TokenKind.*;
 
 public class Parser {
-    private static SymbolTable symbolTable;
+    public static SymbolTable symbolTable;
 
     private static TokenKind kind;
     private static Token token;
@@ -170,20 +170,18 @@ public class Parser {
         }
 
         if (var != null) var.isGlobal = isGlobal;
-
     }
 
     private static void constDeclaration() {
         check(CONST);
         Type type = type();
-        Symbol symbol = null;
 
         if (kind != IDENT) {
             error(IDENT + " expected");
         } else if (type.typeKind != TypeKind.CHAR && type.typeKind != TypeKind.INT) {
             error(type.typeKind + " cannot be constant");
         } else {
-            symbol = symbolTable.insert(token.text, SymbolKind.CONST, type, token);
+            symbolTable.insert(token.text, SymbolKind.CONST, type, token);
         }
 
         scan();
@@ -234,10 +232,15 @@ public class Parser {
             }
 
             symbol.symbolType.fields = fields;
+            symbol.symbolType.sizeInBytes = fields.size() * 4;
+
+            if (fields.size() > 256) {
+                error(String.format("%s has too many fields, it has %d but max is 256 %n",
+                    symbol.name, fields.size()));
+            }
         }
 
         check(RBRACE);
-
     }
 
     private static Symbol fieldDeclaration() {
@@ -299,10 +302,26 @@ public class Parser {
         while (kind != LBRACE && kind != EOF)
             scan();
 
+        if (function.name.equals("main")) {
+            CodeBuffer.mainStart = CodeBuffer.pc;
+        }
+
+        function.address = CodeBuffer.pc;
+        CodeBuffer.putByte(Instruction.ENTER);
+        CodeBuffer.putByte(function.parameters.size());
+        CodeBuffer.putByte(symbolTable.numberOfLocals());
+
         block();
 
-        symbolTable.closeScope();
+        if (function.symbolType.typeKind == TypeKind.NOTYPE) {
+            CodeBuffer.putByte(Instruction.EXIT);
+            CodeBuffer.putByte(Instruction.RETURN);
+        } else {
+            CodeBuffer.putByte(Instruction.TRAP); // A trap for forgotten return
+            CodeBuffer.putByte(1);
+        }
 
+        symbolTable.closeScope();
     }
 
     private static void actualParameters(Symbol function) {
@@ -321,7 +340,7 @@ public class Parser {
         do {
             if (kind == COMMA) scan();
 
-            expression = expression();
+            expression = expression(); // Also loads the value to eStack
 
             if (formalParameters.hasNext()) {
                 parameter = formalParameters.next();
@@ -433,8 +452,21 @@ public class Parser {
                         }
 
                         actualParameters(symbolTable.find(designatorName));
+                        System.out.println(designatorName);
                         check(RPAREN);
                         check(SEMICOLON);
+
+
+                        if (designator.name.equals("len")) {
+                            CodeBuffer.putByte(Instruction.LENGTH);
+                        } else if (!designator.name.equals("ctoi") && !designator.name.equals("itoc")) {
+                            CodeBuffer.putByte(Instruction.CALL);
+                            CodeBuffer.putShort(designator.address);
+                        }
+
+                        if (designator.symbolType.typeKind != TypeKind.NOTYPE)
+                            CodeBuffer.putByte(Instruction.POP); // Get return value
+
                         break;
 
                     case INC:
@@ -461,18 +493,20 @@ public class Parser {
                     if (scopeFunction.symbolType != null && scopeFunction.symbolType.typeKind != TypeKind.NOTYPE) {
                         error("Return value expected");
                     }
-                    break;
-                }
-
-                if (scopeFunction.symbolType.typeKind == TypeKind.NOTYPE) {
-                    error("Return value not expected, function is of type void");
+                } else if (scopeFunction.symbolType.typeKind == TypeKind.NOTYPE) {
+                    error("Cannot return value when function is void");
                 } else {
                     Operand expression = expression();
+
                     if (!expression.type.assignableTo(scopeFunction.symbolType)) {
                         error(String.format("Return type %s expected, got %s",
                                 scopeFunction.symbolType.name,
                                 expression.type.name));
                     }
+
+                    CodeBuffer.load(expression);
+                    CodeBuffer.putByte(Instruction.EXIT);
+                    CodeBuffer.putByte(Instruction.RETURN);
                 }
 
                 check(SEMICOLON);
@@ -525,8 +559,11 @@ public class Parser {
                 check(LPAREN);
 
                 Symbol readDesignator = designator().symbol;
-                if (readDesignator.symbolType.typeKind != TypeKind.INT && readDesignator.symbolType.typeKind != TypeKind.CHAR) {
+                TypeKind readType = readDesignator.symbolType.typeKind;
+                if (readType != TypeKind.INT && readType != TypeKind.CHAR) {
                     error("Can only read characters and numbers, type " + readDesignator.symbolType.typeKind + " can't");
+                } else {
+                    CodeBuffer.putByte(readType == TypeKind.INT ? Instruction.READ : Instruction.BREAD);
                 }
 
                 check(RPAREN);
@@ -536,9 +573,13 @@ public class Parser {
             case PRINT:
                 scan();
                 check(LPAREN);
+
                 Operand printExpression = expression();
-                if (printExpression.type.typeKind != TypeKind.INT && printExpression.type.typeKind != TypeKind.CHAR) {
+                TypeKind printType = printExpression.type.typeKind;
+                if (printType != TypeKind.INT && printType != TypeKind.CHAR) {
                     error("Can only print characters and numbers, type " + printExpression.type.typeKind + " can't");
+                } else {
+                    CodeBuffer.putByte(printType == TypeKind.INT ? Instruction.PRINT : Instruction.BPRINT);
                 }
 
                 while (kind == COMMA) {
@@ -640,12 +681,22 @@ public class Parser {
             case IDENT:
                 operand = designator();
                 symbol = operand.symbol;
+
                 if (symbol.symbolKind == SymbolKind.FUNCTION) {
                     check(LPAREN);
                     actualParameters(symbolTable.find(symbol.name));
                     check(RPAREN);
+
+                    if (symbol.name.equals("len")) {
+                        CodeBuffer.putByte(Instruction.LENGTH);
+                    } else if (!symbol.name.equals("ctoi") && !symbol.name.equals("itoc")) {
+                        CodeBuffer.putByte(Instruction.CALL);
+                        CodeBuffer.putShort(symbol.address);
+                    }
+                } else {
+                    operand.kind = operand.symbol.isGlobal ? OperandKind.GLOBAL : OperandKind.LOCAL;
                 }
-                // TODO
+
                 break;
 
             case CHARACTER:
@@ -682,12 +733,12 @@ public class Parser {
                     scan();
 
                     Operand arraySize = expression(); // Will load the index to CodeBuffer
-                    if (arraySize.type.typeKind != TypeKind.INT) {
+                    if (arraySize != null && arraySize.type.typeKind != TypeKind.INT) {
                         error("Expression of type " + TypeKind.INT + " expected");
                     }
 
-                    CodeBuffer.putByte(Instruction.NEW_ARRAY.ordinal());
-                    CodeBuffer.putByte(symbol.symbolType.name.equals("char") ? 0 : 1);
+                    CodeBuffer.putByte(Instruction.NEW_ARRAY);
+                    CodeBuffer.putByte(symbol.symbolType.sizeInBytes);
 
                     symbol = symbolTable.find(symbol.symbolType.name + "[]");
 
@@ -695,7 +746,7 @@ public class Parser {
 
                     check(RBRACK);
                 } else {
-                    CodeBuffer.putByte(Instruction.NEW.ordinal());
+                    CodeBuffer.putByte(Instruction.NEW);
                     CodeBuffer.putWord(symbol.symbolType.fields.size());
                     operand = new Operand(symbol);
                 }
@@ -724,7 +775,7 @@ public class Parser {
 
         if (kind == ASTERISK || kind == MOD || kind == SLASH) {
             if (!factor1.type.usedInArithmetics()) {
-                error("Cannot do arithmetic operations on '" + factor1 + "'");
+                error("Cannot do arithmetic operations on '" + factor1.symbol + "'");
             }
         }
 
@@ -734,12 +785,12 @@ public class Parser {
             scan();
             factorN = factor();
 
-            if      (op == ASTERISK) CodeBuffer.putByte(Instruction.MUL.ordinal());
-            else if (op == SLASH)    CodeBuffer.putByte(Instruction.DIV.ordinal());
-            else                     CodeBuffer.putByte(Instruction.REM.ordinal());
+            if      (op == ASTERISK) CodeBuffer.putByte(Instruction.MUL);
+            else if (op == SLASH)    CodeBuffer.putByte(Instruction.DIV);
+            else                     CodeBuffer.putByte(Instruction.REM);
 
             if (!factorN.type.usedInArithmetics()) {
-                error("Cannot do arithmetic operations on '" + factorN + "'");
+                error("Cannot do arithmetic operations on '" + factorN.symbol + "'");
             }
         }
 
@@ -754,7 +805,7 @@ public class Parser {
 
         if (kind == PLUS || kind == MINUS) {
             if (!term1.type.usedInArithmetics()) {
-                error("Cannot do arithmetic operations on '" + term1 + "'");
+                error("Cannot do arithmetic operations on '" + term1.symbol + "'");
             }
         }
 
@@ -764,11 +815,11 @@ public class Parser {
             scan();
             termN = term();
 
-            if (op == PLUS) CodeBuffer.putByte(Instruction.ADD.ordinal());
-            else            CodeBuffer.putByte(Instruction.SUB.ordinal());
+            if (op == PLUS) CodeBuffer.putByte(Instruction.ADD);
+            else            CodeBuffer.putByte(Instruction.SUB);
 
             if (!termN.type.usedInArithmetics()) {
-                error("Cannot do arithmetic operations on '" + termN + "'");
+                error("Cannot do arithmetic operations on '" + termN.symbol + "'");
             }
         }
 

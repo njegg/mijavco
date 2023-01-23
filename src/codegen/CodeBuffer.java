@@ -1,6 +1,10 @@
 package codegen;
 
 import parser.Parser;
+import parser.TypeKind;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 
 import static codegen.Instruction.*;
 
@@ -16,7 +20,12 @@ public class CodeBuffer {
         int i = 0;
         while (i < pc) {
             Instruction instruction = instructions[buffer[i]];
-            System.out.printf("%-20s", instruction.niceName);
+
+            if (instruction == ENTER) {
+                System.out.printf("%n%s:%n", Parser.symbolTable.getFunctionNameByAddress(i));
+            }
+
+            System.out.printf("%03d  %-16s", i, instruction.niceName);
 
             int iSize = instruction.size;
             if (iSize > 1) {
@@ -33,7 +42,7 @@ public class CodeBuffer {
                     j++;
                 }
 
-                System.out.printf("(%d)", paramValue);
+                System.out.printf("%s (%d)", " ".repeat(4 * (4 - iSize + 1)), paramValue);
             }
 
             i += instruction.size;
@@ -58,6 +67,10 @@ public class CodeBuffer {
 
     public static void putByte(int x) {
         buffer[pc++] = (byte)x;
+    }
+
+    public static void putByte(Instruction instruction) {
+        putByte(instruction.ordinal());
     }
 
     public static void putShort(int x) {
@@ -87,11 +100,11 @@ public class CodeBuffer {
             case CONSTANT:
                 int value = operand.value;
                 if (value == -1)  {
-                    putByte(CONST_M1.ordinal());
+                    putByte(CONST_M1);
                 } else if (value >= 0 && value <= 5) {
-                    putByte(Instruction.valueOf("CONST_" + value).ordinal());
+                    putByte(Instruction.valueOf("CONST_" + value));
                 } else {
-                    putByte(CONST.ordinal());
+                    putByte(CONST);
                     putWord(value);
                 }
                 break;
@@ -102,14 +115,14 @@ public class CodeBuffer {
                 if (address >= 0 && address <= 5) {
                     putByte(LOAD_0.ordinal() + address);
                 } else {
-                    putByte(LOAD.ordinal());
+                    putByte(LOAD);
                     putWord(operand.address);
                 }
 
                 break;
 
             case GLOBAL:
-                putByte(LOAD_GLOBAL.ordinal());
+                putByte(LOAD_GLOBAL);
                 putWord(operand.address);
                 break;
 
@@ -117,12 +130,12 @@ public class CodeBuffer {
                 break;
 
             case CLASS_FIELD:
-                putByte(LOAD_FIELD.ordinal());
-                putWord(operand.address);
+                putByte(LOAD_FIELD);
+                putByte(operand.address);
                 break;
 
             case CONDITION:
-                putByte(operand.condition.jumpInstruction.ordinal());
+                putByte(operand.condition.jumpInstruction);
                 break;
 
             case ARRAY_ELEMENT:
@@ -143,43 +156,44 @@ public class CodeBuffer {
                 if (address >= 0 && address <= 5) {
                     putByte(STORE_0.ordinal() + address);
                 } else {
-                    putByte(STORE.ordinal());
+                    putByte(STORE);
                     putWord(address);
                 }
 
                 break;
 
             case GLOBAL:
-                putByte(STORE_GLOBAL.ordinal());
+                putByte(STORE_GLOBAL);
                 putWord(location.address);
                 break;
 
             case CLASS_FIELD:
-                putByte(STORE_FIELD.ordinal());
-                putWord(location.address);
+                putByte(STORE_FIELD);
+                putByte(location.address);
                 break;
 
             case ARRAY_ELEMENT:
-                putByte(ARRAY_STORE.ordinal());
+                putByte(operand.symbol.symbolType.typeKind == TypeKind.CHAR ?
+                     BARRAY_STORE : ARRAY_STORE);
                 break;
 
             default:
-                Parser.error("??" + location.kind);
+                throw new RuntimeException("Internal Compiler Error; Cannot store operand");
         }
     }
 
     public static void trueJump(Operand condOperand) {
-        putByte(condOperand.condition.jumpInstruction.ordinal());
+        putByte(condOperand.condition.jumpInstruction);
         condOperand.trueLabel.put();
     }
 
     public static void falseJump(Operand condOperand) {
-        putByte(condOperand.condition.inverseJumpInstruction().ordinal());
+        putByte(condOperand.condition.inverseJumpInstruction());
         condOperand.falseLabel.put();
     }
 
     public static void jump(Label label) {
-        putByte(JMP.ordinal());
+        putByte(JMP);
         label.put();
     }
 }

@@ -57,4 +57,9 @@ public class Operand {
         trueLabel = new Label();
         falseLabel = new Label();
     }
+
+    @Override
+    public String toString() {
+        return symbol.toString();
+    }
 }

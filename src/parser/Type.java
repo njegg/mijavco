@@ -3,15 +3,20 @@ package parser;
 import java.util.HashMap;
 
 public class Type {
-    TypeKind typeKind;
-    Type arrayType;
-    HashMap<String, Symbol> fields; /* Struct */
-    String name;
+    public TypeKind typeKind;
+    public Type arrayType;
+    public HashMap<String, Symbol> fields; /* Struct */
+    public String name;
+    public int sizeInBytes;
 
     public Type(TypeKind kind) {
         typeKind = kind;
+        sizeInBytes = 4; // Default, may change later
+
         if (typeKind == TypeKind.REFERENCE) {
             fields = new HashMap<>();
+        } else if (typeKind == TypeKind.CHAR) {
+            sizeInBytes = 1;
         }
 
         name = typeKind.toString();

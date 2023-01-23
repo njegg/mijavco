@@ -18,8 +18,8 @@ public enum Instruction {
     STORE("store", 5),             // 14
     LOAD_GLOBAL("lglobal", 5),     // 15
     STORE_GLOBAL("sglobal", 5),    // 16
-    LOAD_FIELD("lfield", 5),       // 17
-    STORE_FIELD("sfield", 5),      // 18
+    LOAD_FIELD("lfield", 2),       // 17
+    STORE_FIELD("sfield", 2),      // 18
     CONST("const", 5),             // 19
     CONST_M1("const_m1", 1),       // 20
     CONST_0("const_0", 1),         // 21
