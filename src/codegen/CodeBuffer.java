@@ -2,22 +2,28 @@ package codegen;
 
 import parser.Parser;
 import parser.TypeKind;
+import scanner.Scanner;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.*;
 
 import static codegen.Instruction.*;
 
 public class CodeBuffer {
     private static final byte[] buffer = new byte[3000];
+    private static final int codeStartAddress = 8; // Space for header
 
-    public static int pc = 0;
+    public static int pc = codeStartAddress;
     public static int mainStart;
 
     public static void printCode() {
+        writeHeader();
+
+        System.out.println("main: " + getWord(0));
+        System.out.println("size: " + getWord(4));
+
         var instructions = Instruction.values();
 
-        int i = 0;
+        int i = codeStartAddress;
         while (i < pc) {
             Instruction instruction = instructions[buffer[i]];
 
@@ -64,9 +70,30 @@ public class CodeBuffer {
         }
     }
 
+    public static void writeHeader() {
+        putWord(mainStart, 0);
+        putWord(pc - 1, 4);
+    }
+
+
+    public static void createObjectFile() {
+        String inputFileName = Scanner.getInputFile().getName();
+        String outputFileName = inputFileName.substring(0, inputFileName.lastIndexOf('.'));
+
+        try (OutputStream os = new FileOutputStream(outputFileName + ".obj")) {
+            os.write(buffer);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     public static void putByte(int x) {
         buffer[pc++] = (byte)x;
+    }
+
+    public static void putByte(int x, int address) {
+        buffer[address] = (byte)x;
     }
 
     public static void putByte(Instruction instruction) {
@@ -88,9 +115,20 @@ public class CodeBuffer {
         putShort(x);
     }
 
+    public static void putWord(int x, int address) {
+        putShort(x >> 16, address);
+        putShort(x, address + 2);
+    }
+
     public static int getShort(int address) {
         return (buffer[address] << 8) + buffer[address + 1];
     }
+
+    public static int getWord(int address) {
+        return (getShort(address) << 16) + getShort(address + 2);
+    }
+
+    public static byte[] getBuffer() { return buffer; }
 
 
     public static void load(Operand operand) {

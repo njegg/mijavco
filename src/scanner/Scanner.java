@@ -11,6 +11,7 @@ import static scanner.TokenKind.*;
 
 public class Scanner {
     private static String filePath;
+    private static File inputFile;
 
     private static final char EOLCHAR = '\n';
     private static final char EOFCHAR = (char) -1;
@@ -27,7 +28,7 @@ public class Scanner {
         col = 0;
         line = 1;
 
-        File inputFile = new File(filePath);
+        inputFile = new File(filePath);
         Scanner.filePath = inputFile.getAbsolutePath();
 
         in = new InputStreamReader(new FileInputStream(inputFile));
@@ -53,6 +54,8 @@ public class Scanner {
     public static String getFilePath() {
         return filePath;
     }
+
+    public static File getInputFile() { return inputFile; }
 
     private static void error(String message, Token token) {
         token.kind = ERROR;

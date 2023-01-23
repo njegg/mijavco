@@ -5,6 +5,7 @@ import codegen.Instruction;
 import parser.Parser;
 import scanner.Scanner;
 
+import javax.sound.midi.Soundbank;
 import java.io.IOException;
 
 public class Main {
@@ -22,14 +23,11 @@ public class Main {
         if (errors > 0) {
             System.out.println("Number of errors: " + errors);
         } else {
-//            CodeBuffer.printInstructionSet();
-            System.out.println("\nGenerated code: \n");
             CodeBuffer.printCode();
-
-            System.out.println("\nDump:");
+            System.out.print("Dump: ");
             CodeBuffer.dump();
 
-            System.out.printf("\nSize: %d bytes\n", CodeBuffer.pc);
+            CodeBuffer.createObjectFile();
         }
     }
 
