@@ -1,7 +1,7 @@
 package parser;
 
 import codegen.*;
-import compiler.Main;
+import compiler.Mijavco;
 import scanner.Scanner;
 import scanner.Token;
 import scanner.TokenKind;
@@ -42,7 +42,7 @@ public class Parser {
     public static void error(String message) {
         if (lastError >= ERROR_IGNORE_DISTANCE) {
             System.err.printf("%s:%d:%d : %s\n", Scanner.getFilePath(), prevToken.line, prevToken.column, message);
-            Main.error();
+            Mijavco.error();
         }
 
         lastError = 0;
@@ -452,7 +452,6 @@ public class Parser {
                         }
 
                         actualParameters(symbolTable.find(designatorName));
-                        System.out.println(designatorName);
                         check(RPAREN);
                         check(SEMICOLON);
 
@@ -709,7 +708,7 @@ public class Parser {
 
             case NUMBER:
                 symbol.symbolType = new Type(TypeKind.INT);
-                symbol.value = token.value;
+                symbol.value = token.value * (prevToken.kind == MINUS ? -1 : 1);
                 symbol.symbolKind = SymbolKind.CONST;
                 operand = new Operand(symbol);
                 scan();

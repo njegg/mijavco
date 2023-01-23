@@ -1,6 +1,6 @@
 BUILD_DIR := ./out/production/mijavco
 SRC_DIR := ./src
-TARGET := compiler.Main
+TARGET := compiler.Mijavco
 
 SRCS := $(shell find $(SRC_DIR) -name '*.java')
 

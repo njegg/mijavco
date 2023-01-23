@@ -5,25 +5,29 @@ import parser.TypeKind;
 import scanner.Scanner;
 
 import java.io.*;
+import java.util.Arrays;
 
 import static codegen.Instruction.*;
 
 public class CodeBuffer {
     private static final byte[] buffer = new byte[3000];
-    private static final int codeStartAddress = 8; // Space for header
 
-    public static int pc = codeStartAddress;
+    private static final int CODE_START_ADDRESS = 10; // After header
+    private static final int HEADER_MAIN_ADDRESS = 2;
+    private static final int HEADER_SIZE_ADDRESS = 6;
+
+    public static int pc = CODE_START_ADDRESS;
     public static int mainStart;
 
     public static void printCode() {
         writeHeader();
 
-        System.out.println("main: " + getWord(0));
-        System.out.println("size: " + getWord(4));
+        System.out.println("main: " + getWord(HEADER_MAIN_ADDRESS));
+        System.out.println("size: " + getWord(HEADER_SIZE_ADDRESS));
 
         var instructions = Instruction.values();
 
-        int i = codeStartAddress;
+        int i = CODE_START_ADDRESS;
         while (i < pc) {
             Instruction instruction = instructions[buffer[i]];
 
@@ -39,11 +43,13 @@ public class CodeBuffer {
 
                 int j = i + 1;
                 while (j < i + iSize) {
-                    int b = buffer[j];
+                    byte b = buffer[j];
                     System.out.printf("%03d ", b);
 
                     paramValue <<= 8;
-                    paramValue |= b;
+                    int getSign = (8 * (4 - j + i));
+                    paramValue = paramValue << getSign >> getSign;
+                    paramValue |= (b & 0b11111111);
 
                     j++;
                 }
@@ -71,8 +77,10 @@ public class CodeBuffer {
     }
 
     public static void writeHeader() {
-        putWord(mainStart, 0);
-        putWord(pc - 1, 4);
+        putByte('M', 0);
+        putByte('J', 1);
+        putWord(mainStart, HEADER_MAIN_ADDRESS);
+        putWord(pc - 1, HEADER_SIZE_ADDRESS);
     }
 
 
@@ -81,7 +89,7 @@ public class CodeBuffer {
         String outputFileName = inputFileName.substring(0, inputFileName.lastIndexOf('.'));
 
         try (OutputStream os = new FileOutputStream(outputFileName + ".obj")) {
-            os.write(buffer);
+            os.write(Arrays.copyOf(buffer, pc)); // Trim
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -121,11 +129,11 @@ public class CodeBuffer {
     }
 
     public static int getShort(int address) {
-        return (buffer[address] << 8) + buffer[address + 1];
+        return (buffer[address] << 8) | buffer[address + 1];
     }
 
     public static int getWord(int address) {
-        return (getShort(address) << 16) + getShort(address + 2);
+        return (getShort(address) << 16) | getShort(address + 2);
     }
 
     public static byte[] getBuffer() { return buffer; }

@@ -1,14 +1,12 @@
 package compiler;
 
 import codegen.CodeBuffer;
-import codegen.Instruction;
 import parser.Parser;
 import scanner.Scanner;
 
-import javax.sound.midi.Soundbank;
 import java.io.IOException;
 
-public class Main {
+public class Mijavco {
     private static int errors = 0;
 
     public static void main(String[] args) throws IOException {

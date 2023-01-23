@@ -1,14 +1,7 @@
 program P
 {
-    int one() { return 1; }
-
 	void main()
-		int i;
 	{
-		i = 0;
-		while (i < 5) {
-			print(i);
-			i = i + one();
-		}
+	    print('H');
 	}
 }
