@@ -187,9 +187,11 @@ public class MijaVM {
                     fpush(fbp);  // save base pointer
                     fbp = fsp;   // base pointer is at top of old stack frame
 
-                    for (int i = 0; i < paramsCount; i++) fpush(0);   // space for parameters
-                    for (int i = 0; i < localsCount; i++) fpush(0);        // init locals to 0
+                    // Space for locals and parameters
+                    for (int i = 0; i < paramsCount; i++) fpush(0);
+                    for (int i = 0; i < localsCount; i++) fpush(0);
 
+                    // Loading parameters from estack in reverse
                     for (int i = paramsCount - 1; i >= 0; i--) fstack[fbp + i] = epop();
 
                     break;
