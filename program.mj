@@ -1,7 +1,20 @@
 program P
 {
+	void println(char[] w)
+	{
+		print(w);
+		print('\n');
+	}
+
+	void print2Words(char[] w1, char[] w2)
+	{
+		print(w1);
+		print(' ');
+		print(w2);
+	}
+
 	void main()
 	{
-	    print('H');
+		print2Words("Hello", "world!");
 	}
 }

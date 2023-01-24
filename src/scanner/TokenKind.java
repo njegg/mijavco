@@ -7,6 +7,7 @@ public enum TokenKind {
     IDENT("identifier"),
     NUMBER("number literal"),
     CHARACTER("character literal"),
+    STRING("string"),
 
     PLUS("'+'"),
     MINUS("'-'"),

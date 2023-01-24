@@ -112,13 +112,66 @@ public class Scanner {
     }
 
     private static void readNumber(Token token) {
-        while (Character.isDigit(ch)) {
-            token.value *= 10;
-            token.value += ch - '0';
+        token.kind = NUMBER;
+
+        int base = 10;
+        if (ch == '0') {
+            nextChar();
+
+            if      (ch == 'h') base = 16;
+            else if (ch == 'o') base = 8;
+            else if (ch == 'b') base = 2;
+            else if (!Character.isAlphabetic(ch)) return;
+            else {
+                error("Illegal number format character, use 'o' - octal, 'b' - binary or 'h' - hex", token);
+                nextChar();
+                return;
+            }
+
             nextChar();
         }
 
-        token.kind = NUMBER;
+        if (base == 10) {
+            while (Character.isDigit(ch)) {
+                token.value = token.value * 10 + (ch - '0');
+                nextChar();
+            }
+        } else if (base == 8) {
+            while (ch >= '0' && ch <= '7') {
+                token.value = token.value * 8 + (ch - '0');
+                nextChar();
+            }
+        } else if (base == 2) {
+            while (ch == '0' || ch == '1') {
+                token.value = token.value * 2 + (ch - '0');
+                nextChar();
+            }
+
+        } else {
+            while (isHex(ch)) {
+                token.value = token.value * 16 + toHex(ch);
+                nextChar();
+            }
+        }
+
+        if (Character.isDigit(ch)) {
+            error(String.format("'%c' is a illegal digit for base %d%n", ch, base), token);
+            return;
+        }
+    }
+
+    private static boolean isHex(char ch) {
+        return Character.isDigit(ch) || "abcdef".indexOf(ch) != -1 || "ABCDEF".indexOf(ch) != -1 ;
+    }
+
+    private static int toHex(char ch) {
+        if (Character.isDigit(ch)) {
+            return ch - '0';
+        } else if (Character.isLowerCase(ch)) {
+            return ch - 'a' + 10;
+        } else {
+            return ch - 'A' + 10;
+        }
     }
 
     private static void readCharacter(Token token) {
@@ -173,11 +226,23 @@ public class Scanner {
     }
 
     private static void readString(Token token) {
+        nextChar();
 
+        StringBuilder sb = new StringBuilder();
+
+        while (ch != '\"') {
+            sb.append(ch);
+            nextChar();
+        }
+
+        token.kind = STRING;
+        token.text = sb.toString();
+        token.value = sb.length();
+
+        nextChar();
     }
 
     private static void readRest(Token token) {
-
         switch (ch) {
             case ';': token.kind = SEMICOLON; nextChar(); break;
             case '.': token.kind = PERIOD;    nextChar(); break;

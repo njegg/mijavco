@@ -7,6 +7,10 @@ for a Compiler Construction course whose materials were used in
 Compiler Construction course at Faculty of Sciences, University of Novi Sad.
 Language used in this project is a modified version of that language
 
+### Terminal demo
+
+[![asciicast](https://asciinema.org/a/553991.svg)](https://asciinema.org/a/553991)
+
 ### Example
 For a file:
 ```java

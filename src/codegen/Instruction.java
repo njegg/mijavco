@@ -8,16 +8,16 @@ public enum Instruction {
     LOAD_3("load_3", 1),           // 4
     LOAD_4("load_4", 1),           // 5
     LOAD_5("load_5", 1),           // 6
-    LOAD("load", 5),               // 7
+    LOAD("load", 2),               // 7
     STORE_0("store_0", 1),         // 8
     STORE_1("store_1", 1),         // 9
     STORE_2("store_2", 1),         // 10
     STORE_3("store_3", 1),         // 11
     STORE_4("store_4", 1),         // 12
     STORE_5("store_5", 1),         // 13
-    STORE("store", 5),             // 14
-    LOAD_GLOBAL("lglobal", 5),     // 15
-    STORE_GLOBAL("sglobal", 5),    // 16
+    STORE("store", 2),             // 14
+    LOAD_GLOBAL("lglobal", 3),     // 15
+    STORE_GLOBAL("sglobal", 3),    // 16
     LOAD_FIELD("lfield", 2),       // 17
     STORE_FIELD("sfield", 2),      // 18
     CONST("const", 5),             // 19
@@ -62,7 +62,9 @@ public enum Instruction {
     PRINT("print", 1),             // 58
     BREAD("bread", 1),             // 59
     BPRINT("bprint", 1),           // 60
-    TRAP("trap", 2);               // 61
+    LOAD_STRING("load_string", 5), // 61
+    TRAP("trap", 2),               // 62
+    PRINTS("prints", 1);           // 63
 
     Instruction(String niceName, int size) {
         this.niceName = niceName;

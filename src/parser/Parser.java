@@ -307,9 +307,11 @@ public class Parser {
         }
 
         function.address = CodeBuffer.pc;
+
+        int parameterSize = function.parameters.size();
         CodeBuffer.putByte(Instruction.ENTER);
-        CodeBuffer.putByte(function.parameters.size());
-        CodeBuffer.putByte(symbolTable.numberOfLocals());
+        CodeBuffer.putByte(parameterSize);
+        CodeBuffer.putByte(symbolTable.numberOfLocals() - parameterSize);
 
         block();
 
@@ -476,6 +478,13 @@ public class Parser {
                             error("Cant do arithmetic operations on a " + designator.symbolKind);
                         }
 
+                        OperandKind designatorKind = designatorOperand.kind;
+                        CodeBuffer.load(designatorOperand);
+                        CodeBuffer.putByte(prevToken.kind == INC ? Instruction.CONST_1 : Instruction.CONST_M1);
+                        CodeBuffer.putByte(Instruction.ADD);
+                        designatorOperand.kind = designatorKind;
+                        CodeBuffer.store(designatorOperand, null);
+
                         check(SEMICOLON);
                         break;
 
@@ -575,15 +584,16 @@ public class Parser {
 
                 Operand printExpression = expression();
                 TypeKind printType = printExpression.type.typeKind;
-                if (printType != TypeKind.INT && printType != TypeKind.CHAR) {
+                boolean isString = symbolTable.find("char[]").symbolType.equals(printExpression.type);
+
+                if (printType != TypeKind.INT && printType != TypeKind.CHAR && !isString) {
                     error("Can only print characters and numbers, type " + printExpression.type.typeKind + " can't");
                 } else {
-                    CodeBuffer.putByte(printType == TypeKind.INT ? Instruction.PRINT : Instruction.BPRINT);
-                }
-
-                while (kind == COMMA) {
-                    scan();
-                    check(NUMBER);
+                    if (isString) {
+                        CodeBuffer.putByte(Instruction.PRINTS);
+                    } else {
+                        CodeBuffer.putByte(printType == TypeKind.INT ? Instruction.PRINT : Instruction.BPRINT);
+                    }
                 }
 
                 check(RPAREN);
@@ -714,6 +724,18 @@ public class Parser {
                 scan();
                 break;
 
+            case STRING:
+                CodeBuffer.putByte(Instruction.LOAD_STRING);
+                CodeBuffer.putWord(token.value);
+                for (char c : token.text.toCharArray())
+                    CodeBuffer.putByte(c);
+                CodeBuffer.putByte('\0');
+
+                operand = new Operand(symbolTable.find("char[]"));
+
+                scan();
+                break;
+
             case NEW:
                 scan();
                 if (kind == IDENT) {
@@ -764,6 +786,7 @@ public class Parser {
         }
 
         if (operand != null) CodeBuffer.load(operand);
+        else return new Operand(new Symbol(token));
 
         return operand;
     }

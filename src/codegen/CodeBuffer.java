@@ -59,6 +59,16 @@ public class CodeBuffer {
 
             i += instruction.size;
 
+            if (instruction == LOAD_STRING) {
+                System.out.print("\t\"");
+                while (buffer[i] != '\0') {
+                    System.out.print((char) buffer[i]);
+                    i++;
+                }
+                i++;
+                System.out.print('\"');
+            }
+
             System.out.println();
         }
     }
@@ -84,15 +94,17 @@ public class CodeBuffer {
     }
 
 
-    public static void createObjectFile() {
-        String inputFileName = Scanner.getInputFile().getName();
-        String outputFileName = inputFileName.substring(0, inputFileName.lastIndexOf('.'));
+    public static File createObjectFile() throws IOException {
+        writeHeader();
 
-        try (OutputStream os = new FileOutputStream(outputFileName + ".obj")) {
-            os.write(Arrays.copyOf(buffer, pc)); // Trim
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        String inputFileName = Scanner.getInputFile().getName();
+        File outputFile = new File(inputFileName.substring(0, inputFileName.lastIndexOf('.')) + ".obj");
+
+        OutputStream os = new FileOutputStream(outputFile);
+        os.write(Arrays.copyOf(buffer, pc)); // Trim
+        os.close();
+
+        return outputFile;
     }
 
 
@@ -162,14 +174,14 @@ public class CodeBuffer {
                     putByte(LOAD_0.ordinal() + address);
                 } else {
                     putByte(LOAD);
-                    putWord(operand.address);
+                    putByte(operand.address);
                 }
 
                 break;
 
             case GLOBAL:
                 putByte(LOAD_GLOBAL);
-                putWord(operand.address);
+                putShort(operand.address);
                 break;
 
             case ESTACK:
@@ -203,14 +215,14 @@ public class CodeBuffer {
                     putByte(STORE_0.ordinal() + address);
                 } else {
                     putByte(STORE);
-                    putWord(address);
+                    putByte(address);
                 }
 
                 break;
 
             case GLOBAL:
                 putByte(STORE_GLOBAL);
-                putWord(location.address);
+                putShort(location.address);
                 break;
 
             case CLASS_FIELD:
