@@ -197,7 +197,9 @@ public class CodeBuffer {
                 break;
 
             case ARRAY_ELEMENT:
+                putByte(operand.symbol.symbolType.typeKind == TypeKind.CHAR ? BARRAY_LOAD : ARRAY_LOAD);
                 break;
+
             case FUNCTION:
                 break;
         }
@@ -234,9 +236,6 @@ public class CodeBuffer {
                 putByte(operand.symbol.symbolType.typeKind == TypeKind.CHAR ?
                      BARRAY_STORE : ARRAY_STORE);
                 break;
-
-            default:
-                throw new RuntimeException("Internal Compiler Error; Cannot store operand");
         }
     }
 

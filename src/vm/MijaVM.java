@@ -26,6 +26,7 @@ public class MijaVM {
     private static final int[]  estack = new int[ESTACK_SIZE_WORDS];
     private static final int[]  fstack = new int[FSTACK_SIZE_WORDS];
 
+    private static Instruction instruction; // Current instruction
 
     public static void runFromFile(String filePath) throws IOException {
         File inputFile = new File(filePath);
@@ -57,7 +58,7 @@ public class MijaVM {
         var instructions = Instruction.values();
 
         while (true) {
-            Instruction instruction = instructions[getByte()];
+            instruction = instructions[getByte()];
 
             switch (instruction) {
                 /* Loading and storing */
@@ -66,7 +67,7 @@ public class MijaVM {
                     epush(getWord());
                     break;
 
-                case CONST_0: case CONST_1: case CONST_2: case CONST_3: case CONST_4: case CONST_5:
+                case CONST_M1: case CONST_0: case CONST_1: case CONST_2: case CONST_3: case CONST_4: case CONST_5:
                     epush(instruction.ordinal() - Instruction.CONST_0.ordinal());
                     break;
 
@@ -99,38 +100,135 @@ public class MijaVM {
                 /* Arrays */
 
                 case NEW_ARRAY:
-                    int elements = epop();
+                    int length = epop();
                     int elementSize = getByte();
 
-                    heap[freep] = elements;
-                    heap[freep + 1] = elementSize;
+                    if (length < 0) {
+                        System.err.println("Cannot initialize array with <0 elements");
+                        Error.exit(Error.RUNTIME, pc, instruction.niceName);
+                    }
 
-                    epush(malloc(elementSize , elements) + 2);
+                    heap[freep] = length;
+                    heap[freep + 1] = elementSize;
+                    malloc(WORD_BYTES, 2);
+
+                    epush(malloc(elementSize , length));
                     break;
 
                 case ARRAY_LOAD:
+                    int index = epop();
+                    address = epop();
 
+                    if (address == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+
+                    length = heap[address - 2];
+
+                    if (index < 0 || index >= length) {
+                        System.err.printf("Index %d for length %d%n", index, length);
+                        Error.exit(Error.INDEX_OUT_OF_BOUNDS, pc, instruction.niceName);
+                    }
+
+                    elementSize = heap[address - 1];
+
+                    epush(heap[address + index * elementSize]);
+                    break;
+
+                case ARRAY_STORE:
+                    int value = epop();
+                    index = epop();
+                    address = epop();
+
+                    if (address == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+
+                    length = heap[address - 2];
+                    elementSize = heap[address - 1];
+
+                    if (index < 0 || index >= length) {
+                        System.err.printf("Index %d for length %d%n", index, length);
+                        Error.exit(Error.INDEX_OUT_OF_BOUNDS, pc, instruction.niceName);
+                    }
+
+                    heap[address + index * elementSize] = value;
+                    break;
+
+                case BARRAY_LOAD:
+                    index = epop();
+                    address = epop();
+
+                    if (address == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+
+                    length = heap[address - 2];
+
+                    if (index < 0 || index >= length) {
+                        System.err.printf("Index %d for length %d%n", index, length);
+                        Error.exit(Error.INDEX_OUT_OF_BOUNDS, pc, instruction.niceName);
+                    }
+
+                    int word = heap[address + index / 4];
+                    int shiftAmount = 8 * (3 - index % 4);
+                    word >>= shiftAmount;
+
+                    epush((byte) word);
+                    break;
+
+                case BARRAY_STORE:
+                    byte b = (byte) epop();
+                    index = epop();
+                    address = epop();
+
+                    if (address == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+
+                    length = heap[address - 2];
+
+                    if (index < 0 || index >= length) {
+                        System.err.printf("Index %d for length %d%n", index, length);
+                        Error.exit(Error.INDEX_OUT_OF_BOUNDS, pc, instruction.niceName);
+                    }
+
+                    word = heap[address + index / 4];
+                    shiftAmount = 8 * (3 - index % 4);
+
+                    int insertValue = b << shiftAmount;
+                    int clearByteMask = ~(0xff << shiftAmount);
+
+                    heap[address + index / 4] = word & clearByteMask | insertValue;
+                    break;
+
+                case LENGTH:
+                    address = epop() - 2;
+                    if (address < 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+                    epush(heap[address]);
                     break;
 
                 case LOAD_STRING:
-                    int stringLength = getWord();
+                    length = getWord();
                     malloc(WORD_BYTES, 2); // 2 words for length and element size
-                    int stringHeapAddress = malloc(1, stringLength);
+                    address = malloc(1, length);
 
-                    heap[stringHeapAddress++] = stringLength;
-                    heap[stringHeapAddress++] = 1;
+                    heap[address++] = length;
+                    heap[address++] = 1;
 
-                    epush(stringHeapAddress);
+                    epush(address);
 
-                    int wordIndex = stringHeapAddress;
-                    while (stringLength >= 4) {
-                        heap[wordIndex] = (getByte() << 24) | (getByte() << 16) | (getByte() << 8) | getByte();
-                        stringLength -= 4;
-                        wordIndex++;
+                    index = address;
+                    while (length >= 4) {
+                        heap[index] = (getByte() << 24) | (getByte() << 16) | (getByte() << 8) | getByte();
+                        length -= 4;
+                        index++;
                     }
 
-                    while (stringLength --> 0) {
-                        heap[wordIndex] |= (getByte() << (8 * (stringLength + 1)));
+                    while (length --> 0) {
+                        heap[index] |= (getByte() << (8 * (length + 1)));
                     }
 
                     break;
@@ -144,25 +242,25 @@ public class MijaVM {
                     break;
 
                 case STORE_FIELD:
-                    int value = epop();
-                    int structAddress = epop();
+                    value = epop();
+                    address = epop();
 
-                    if (structAddress == 0) {
+                    if (address == 0) {
                         Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
                     }
 
-                    int fieldIndex = getByte() & 0xff;
-                    heap[structAddress + fieldIndex] = value;
+                    index = getByte() & 0xff;
+                    heap[address + index] = value;
                     break;
 
                 case LOAD_FIELD:
-                    structAddress = epop();
-                    if (structAddress == 0) {
+                    address = epop();
+                    if (address == 0) {
                         Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
                     }
 
-                    fieldIndex = getByte();
-                    epush(heap[structAddress + fieldIndex]);
+                    index = getByte();
+                    epush(heap[address + index]);
                     break;
 
                 /* Operations */
@@ -323,6 +421,10 @@ public class MijaVM {
         int words = (bytes + 3) / 4;
 
         freep += words;
+
+        if (freep >= HEAP_SIZE_WORDS) {
+            Error.exit(Error.HEAP_OVERFLOW, pc, instruction.niceName);
+        }
 
         return address;
     }

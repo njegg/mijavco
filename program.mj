@@ -1,36 +1,14 @@
 program P
-	struct Node {
-		int val;
-		Node next;
-	}
 {
-	Node insert(Node root, int val)
-		Node n;
-	{
-		if (root == null) {
-			print("root is null");
-			return null;
-		}
-
-		n = new Node;
-		n.val = val;
-		n.next = root;
-
-		return n;
-	}
-
 	void main()
-		Node root;
+		char[] s;
+		char c;
+		int i;
 	{
-		root = new Node;
-		root.val = 1;
-		root = insert(root, 2);
-		root = insert(root, 3);
+		s = "hello Borld";
+		s[6] = 'W';
+		s[0] = 'H';
 
-		while (root != null) {
-			print(root.val);
-			print('\n');
-			root = root.next;
-		}
+		print(s);
 	}
 }

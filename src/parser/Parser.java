@@ -756,7 +756,7 @@ public class Parser {
                     scan();
 
                     Operand arraySize = expression(); // Will load the index to CodeBuffer
-                    if (arraySize != null && arraySize.type.typeKind != TypeKind.INT) {
+                    if (arraySize.type.typeKind != TypeKind.INT) {
                         error("Expression of type " + TypeKind.INT + " expected");
                     }
 
