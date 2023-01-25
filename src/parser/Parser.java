@@ -513,9 +513,10 @@ public class Parser {
                     }
 
                     CodeBuffer.load(expression);
-                    CodeBuffer.putByte(Instruction.EXIT);
-                    CodeBuffer.putByte(Instruction.RETURN);
                 }
+
+                CodeBuffer.putByte(Instruction.EXIT);
+                CodeBuffer.putByte(Instruction.RETURN);
 
                 check(SEMICOLON);
                 break;
@@ -638,14 +639,15 @@ public class Parser {
                     if (!designator.symbolType.isStruct()) {
                         error(designator + " has no accessible fields");
                     } else if (prevToken.kind == IDENT) {
+                        // Designator is now going to be a field
                         designator = symbolTable.findField(prevToken.text, designator.symbolType);
 
                         if (designator == null) {
                             error(String.format("Error obtaining the field '" + prevToken.text + "'"));
                         } else {
-                            CodeBuffer.load(operand);
-                            operand = new Operand(designator);
-                            operand.kind = OperandKind.CLASS_FIELD;
+                            CodeBuffer.load(operand);               // Address of struct
+                            operand = new Operand(designator);      // Operand is now a field not a struct pointer
+                            operand.kind = OperandKind.STRUCT_FIELD;
                         }
                     }
                 }
@@ -702,7 +704,7 @@ public class Parser {
                         CodeBuffer.putByte(Instruction.CALL);
                         CodeBuffer.putShort(symbol.address);
                     }
-                } else {
+                } else if (operand.kind != OperandKind.STRUCT_FIELD && operand.kind != OperandKind.ARRAY_ELEMENT) {
                     operand.kind = operand.symbol.isGlobal ? OperandKind.GLOBAL : OperandKind.LOCAL;
                 }
 
@@ -768,7 +770,7 @@ public class Parser {
                     check(RBRACK);
                 } else {
                     CodeBuffer.putByte(Instruction.NEW);
-                    CodeBuffer.putWord(symbol.symbolType.fields.size());
+                    CodeBuffer.putByte(symbol.symbolType.fields.size());
                     operand = new Operand(symbol);
                 }
 

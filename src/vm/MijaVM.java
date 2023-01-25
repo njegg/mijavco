@@ -1,24 +1,27 @@
 package vm;
 
-import codegen.CodeBuffer;
+import codegen.Error;
 import codegen.Instruction;
 
-import javax.swing.plaf.synth.SynthUI;
-import java.io.*;
-import java.util.Arrays;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class MijaVM {
-    private static int startAddress;
     private static int pc;
     private static int fbp, fsp, esp;
-    private static int freep;
+    private static int freep = 1; // 0 is reserved for null
 
     private static final int HEAP_SIZE_WORDS = 100_000;
     private static final int FSTACK_SIZE_WORDS = 400;
     private static final int ESTACK_SIZE_WORDS = 30;
 
+    private static final int WORD_BYTES = 4;
+    private static final int SHORT_BYTES = 2;
+
     private static byte[] codeData;
-    private static int[]  globalData;
+    private static int[]  globalData = new int[100]; // TODO
     private static int[]  heap   = new int[HEAP_SIZE_WORDS];
     private static final int[]  estack = new int[ESTACK_SIZE_WORDS];
     private static final int[]  fstack = new int[FSTACK_SIZE_WORDS];
@@ -87,6 +90,11 @@ public class MijaVM {
                     fstack[fbp + localStoreAddress] = epop();
                     break;
 
+                case LOAD_GLOBAL:
+                    int address = getShort();
+                    epush(globalData[address]);
+                    break;
+
 
                 /* Arrays */
 
@@ -97,7 +105,7 @@ public class MijaVM {
                     heap[freep] = elements;
                     heap[freep + 1] = elementSize;
 
-                    epush(malloc(elementSize, elements) + 2);
+                    epush(malloc(elementSize , elements) + 2);
                     break;
 
                 case ARRAY_LOAD:
@@ -106,7 +114,7 @@ public class MijaVM {
 
                 case LOAD_STRING:
                     int stringLength = getWord();
-                    malloc(4, 2);
+                    malloc(WORD_BYTES, 2); // 2 words for length and element size
                     int stringHeapAddress = malloc(1, stringLength);
 
                     heap[stringHeapAddress++] = stringLength;
@@ -127,10 +135,58 @@ public class MijaVM {
 
                     break;
 
+
+                /* Structs */
+
+                case NEW:
+                    int fieldCount = getByte() & 0xff;
+                    epush(malloc(WORD_BYTES, fieldCount));
+                    break;
+
+                case STORE_FIELD:
+                    int value = epop();
+                    int structAddress = epop();
+
+                    if (structAddress == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+
+                    int fieldIndex = getByte() & 0xff;
+                    heap[structAddress + fieldIndex] = value;
+                    break;
+
+                case LOAD_FIELD:
+                    structAddress = epop();
+                    if (structAddress == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
+
+                    fieldIndex = getByte();
+                    epush(heap[structAddress + fieldIndex]);
+                    break;
+
                 /* Operations */
 
                 case ADD:
                     epush(epop() + epop());
+                    break;
+
+
+                /* Jumps */
+
+                case JMP:
+                    int jumpAmount = getShort();
+                    pc += jumpAmount - 3;
+                    break;
+
+                case JEQ:
+                    jumpAmount = getShort();
+                    if (epop() == epop()) pc += jumpAmount - 3;
+                    break;
+
+                case JNE:
+                    jumpAmount = getShort();
+                    if (epop() != epop()) pc += jumpAmount - 3;
                     break;
 
 
@@ -146,6 +202,10 @@ public class MijaVM {
 
                 case PRINTS:
                     int stringAddress = epop();
+
+                    if (stringAddress == 0) {
+                        Error.exit(Error.NULL_POINTER, pc, instruction.niceName);
+                    }
 
                     int len = heap[stringAddress - 2];
                     int currentWordAddress = stringAddress;

@@ -4,6 +4,7 @@ import codegen.CodeBuffer;
 import codegen.Operand;
 import scanner.Token;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 
 public class SymbolTable {
@@ -37,7 +38,8 @@ public class SymbolTable {
         insert("char[]", SymbolKind.TYPE, charArrType, null);
 
         Symbol nullSymbol = insert("null", SymbolKind.CONST, new Type(TypeKind.REFERENCE), null);
-        nullSymbol.symbolType.fields = null;
+        nullSymbol.symbolType.fields = new HashMap<>();
+        nullSymbol.symbolType.arrayType = new Type(TypeKind.NOTYPE);
 
         Symbol ctoi = insert("ctoi", SymbolKind.FUNCTION, new Type(TypeKind.INT), null);
         openScope(ctoi);

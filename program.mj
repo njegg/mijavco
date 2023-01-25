@@ -1,20 +1,36 @@
 program P
-{
-	void println(char[] w)
-	{
-		print(w);
-		print('\n');
+	struct Node {
+		int val;
+		Node next;
 	}
-
-	void print2Words(char[] w1, char[] w2)
+{
+	Node insert(Node root, int val)
+		Node n;
 	{
-		print(w1);
-		print(' ');
-		print(w2);
+		if (root == null) {
+			print("root is null");
+			return null;
+		}
+
+		n = new Node;
+		n.val = val;
+		n.next = root;
+
+		return n;
 	}
 
 	void main()
+		Node root;
 	{
-		print2Words("Hello", "world!");
+		root = new Node;
+		root.val = 1;
+		root = insert(root, 2);
+		root = insert(root, 3);
+
+		while (root != null) {
+			print(root.val);
+			print('\n');
+			root = root.next;
+		}
 	}
 }

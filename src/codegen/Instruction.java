@@ -37,7 +37,7 @@ public enum Instruction {
     SHL("shl", 1),                 // 33
     SHR("shr", 1),                 // 34
     INC("inc", 3),                 // 35
-    NEW("new", 5),                 // 36
+    NEW("new", 2),                 // 36
     NEW_ARRAY("newarr", 2),        // 37
     ARRAY_LOAD("aload", 1),        // 38
     ARRAY_STORE("astore", 1),      // 39

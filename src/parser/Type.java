@@ -40,6 +40,8 @@ public class Type {
         if (this.typeKind != that.typeKind) return false;
 
         if (this.typeKind == TypeKind.REFERENCE) {
+            if (that.arrayType != null && that.fields != null) return true; // special case for null
+
             if (this.arrayType != null) {
                 return that.arrayType != null &&
                         (this.arrayType.equals(that.arrayType) || that.arrayType.typeKind == TypeKind.NOTYPE);
@@ -55,7 +57,7 @@ public class Type {
     }
 
     public boolean assignableTo(Type that) {
-        return that.typeKind != TypeKind.NOTYPE && this.typeKind != TypeKind.NOTYPE && equals(that);
+        return that.typeKind != TypeKind.NOTYPE && this.typeKind != TypeKind.NOTYPE && that.equals(this);
     }
 
 

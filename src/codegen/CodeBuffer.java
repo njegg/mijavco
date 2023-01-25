@@ -187,7 +187,7 @@ public class CodeBuffer {
             case ESTACK:
                 break;
 
-            case CLASS_FIELD:
+            case STRUCT_FIELD:
                 putByte(LOAD_FIELD);
                 putByte(operand.address);
                 break;
@@ -225,7 +225,7 @@ public class CodeBuffer {
                 putShort(location.address);
                 break;
 
-            case CLASS_FIELD:
+            case STRUCT_FIELD:
                 putByte(STORE_FIELD);
                 putByte(location.address);
                 break;
