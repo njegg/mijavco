@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Random;
+import java.util.Scanner;
 
 public class MijaVM {
     private static int pc;
@@ -15,22 +17,26 @@ public class MijaVM {
 
     private static final int HEAP_SIZE_WORDS = 100_000;
     private static final int FSTACK_SIZE_WORDS = 400;
-    private static final int ESTACK_SIZE_WORDS = 30;
+    private static final int ESTACK_SIZE_WORDS = 100;
+    private static final int GLOBAL_DATA_SIZE_WORDS = 200;
 
     private static final int WORD_BYTES = 4;
     private static final int SHORT_BYTES = 2;
 
     private static byte[] codeData;
-    private static int[]  globalData = new int[100]; // TODO
-    private static int[]  heap   = new int[HEAP_SIZE_WORDS];
-    private static final int[]  estack = new int[ESTACK_SIZE_WORDS];
-    private static final int[]  fstack = new int[FSTACK_SIZE_WORDS];
+    private static final int[]  globalData  = new int[200];
+    private static final int[]  heap        = new int[HEAP_SIZE_WORDS];
+    private static final int[]  estack      = new int[ESTACK_SIZE_WORDS];
+    private static final int[]  fstack      = new int[FSTACK_SIZE_WORDS];
+
+    private static Scanner in;
+    private static Random rand;
 
     private static Instruction instruction; // Current instruction
 
     public static void runFromFile(String filePath) throws IOException {
         File inputFile = new File(filePath);
-        InputStream in = new FileInputStream(inputFile);
+        InputStream fileInputStream = new FileInputStream(inputFile);
         long inputFileSize = inputFile.length();
 
         if (inputFileSize > 3000) {
@@ -38,8 +44,8 @@ public class MijaVM {
         }
 
         codeData = new byte[(int) inputFileSize];
-        in.read(codeData);
-        in.close();
+        fileInputStream.read(codeData);
+        fileInputStream.close();
 
         char M = (char) getByte(0);
         char J = (char) getByte(1);
@@ -51,7 +57,12 @@ public class MijaVM {
         pc = getWord(2);
         getWord(4);
 
+        in = new Scanner(System.in);
+        rand = new Random();
+
         execute();
+
+        in.close();
     }
 
     private static void execute() {
@@ -76,6 +87,8 @@ public class MijaVM {
                     epush(fstack[fbp + getByte()]);
                     break;
 
+                case NOP:
+                    break;
                 case LOAD_0: case LOAD_1: case LOAD_2: case LOAD_3: case LOAD_4: case LOAD_5:
                     int localLoadAddress = instruction.ordinal() - Instruction.LOAD_0.ordinal();
                     epush(fstack[fbp + localLoadAddress]);
@@ -96,6 +109,10 @@ public class MijaVM {
                     epush(globalData[address]);
                     break;
 
+                case STORE_GLOBAL:
+                    address = getShort();
+                    globalData[address] = epop();
+                    break;
 
                 /* Arrays */
 
@@ -265,16 +282,18 @@ public class MijaVM {
 
                 /* Operations */
 
-                case ADD:
-                    epush(epop() + epop());
-                    break;
+                case ADD: epush(epop() + epop()); break;
+                case SUB: epush(epop() - epop()); break;
+                case MUL: epush(epop() * epop()); break;
+                case DIV: epush(epop() / epop()); break;
+                case REM: epush(epop() % epop()); break;
 
 
                 /* Jumps */
 
                 case JMP:
                     int jumpAmount = getShort();
-                    pc += jumpAmount - 3;
+                    pc += jumpAmount - 3; // -3 so its relative to jmp instruction
                     break;
 
                 case JEQ:
@@ -285,6 +304,26 @@ public class MijaVM {
                 case JNE:
                     jumpAmount = getShort();
                     if (epop() != epop()) pc += jumpAmount - 3;
+                    break;
+
+                case JGT:
+                    jumpAmount = getShort();
+                    if (epop() < epop()) pc += jumpAmount - 3;
+                    break;
+
+                case JLE:
+                    jumpAmount = getShort();
+                    if (epop() >= epop()) pc += jumpAmount - 3;
+                    break;
+
+                case JLT:
+                    jumpAmount = getShort();
+                    if (epop() > epop()) pc += jumpAmount - 3;
+                    break;
+
+                case JGE:
+                    jumpAmount = getShort();
+                    if (epop() <= epop()) pc += jumpAmount - 3;
                     break;
 
 
@@ -357,6 +396,24 @@ public class MijaVM {
                 case EXIT:
                     fsp = fbp;      // base is old stack top
                     fbp = fpop();   // retrieve previously saved base pointer
+                    break;
+
+                case POP: epop(); break;
+
+                case READ:
+                    epush(in.nextInt());
+                    break;
+
+                case BREAD:
+                    epush(in.nextByte());
+                    break;
+
+                case RAND:
+                    epush(rand.nextInt(epop()));
+                    break;
+
+                case TRAP:
+                    Error.exit(Error.values()[getByte()], pc, instruction.niceName);
                     break;
             }
         }

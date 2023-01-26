@@ -11,14 +11,7 @@ public class Type {
 
     public Type(TypeKind kind) {
         typeKind = kind;
-        sizeInBytes = 4; // Default, may change later
-
-        if (typeKind == TypeKind.REFERENCE) {
-            fields = new HashMap<>();
-        } else if (typeKind == TypeKind.CHAR) {
-            sizeInBytes = 1;
-        }
-
+        sizeInBytes = typeKind == TypeKind.CHAR ? 1 : 4;
         name = typeKind.toString();
     }
 
@@ -44,7 +37,7 @@ public class Type {
 
             if (this.arrayType != null) {
                 return that.arrayType != null &&
-                        (this.arrayType.equals(that.arrayType) || that.arrayType.typeKind == TypeKind.NOTYPE);
+                        (this.arrayType.equals(that.arrayType) || this.arrayType.typeKind == TypeKind.NOTYPE);
             } else {
                 // Compares if they have same symbols (fields) by comparing their types
                 // If fields are null, it's a special case for 'null constant'

@@ -175,24 +175,29 @@ public class Parser {
     private static void constDeclaration() {
         check(CONST);
         Type type = type();
+        Symbol symbol = new Symbol();
 
         if (kind != IDENT) {
             error(IDENT + " expected");
         } else if (type.typeKind != TypeKind.CHAR && type.typeKind != TypeKind.INT) {
             error(type.typeKind + " cannot be constant");
         } else {
-            symbolTable.insert(token.text, SymbolKind.CONST, type, token);
+            symbol = symbolTable.insert(token.text, SymbolKind.NOSYM, type, token);
+            symbol.symbolKind = SymbolKind.CONST;
         }
 
         scan();
         if (kind != ASSIGN) error("You forgot to initialize a constant");
 
         scan();
-        if (kind != NUMBER && kind != CHARACTER) error("Value expected");
+        if (kind != NUMBER && kind != CHARACTER) {
+            error("Value expected");
+        } else {
+            symbol.value = token.value;
+        }
 
         scan();
         check(SEMICOLON);
-
     }
 
     private static void structDeclaration() {
@@ -460,6 +465,8 @@ public class Parser {
 
                         if (designator.name.equals("len")) {
                             CodeBuffer.putByte(Instruction.LENGTH);
+                        } else if (designator.name.equals("rand")) {
+                            CodeBuffer.putByte(Instruction.RAND);
                         } else if (!designator.name.equals("ctoi") && !designator.name.equals("itoc")) {
                             CodeBuffer.putByte(Instruction.CALL);
                             CodeBuffer.putShort(designator.address);
@@ -700,10 +707,14 @@ public class Parser {
 
                     if (symbol.name.equals("len")) {
                         CodeBuffer.putByte(Instruction.LENGTH);
+                    } else if (symbol.name.equals("rand")) {
+                        CodeBuffer.putByte(Instruction.RAND);
                     } else if (!symbol.name.equals("ctoi") && !symbol.name.equals("itoc")) {
                         CodeBuffer.putByte(Instruction.CALL);
                         CodeBuffer.putShort(symbol.address);
                     }
+                } else if (symbol.symbolKind == SymbolKind.CONST) {
+                    operand.kind = OperandKind.CONSTANT;
                 } else if (operand.kind != OperandKind.STRUCT_FIELD && operand.kind != OperandKind.ARRAY_ELEMENT) {
                     operand.kind = operand.symbol.isGlobal ? OperandKind.GLOBAL : OperandKind.LOCAL;
                 }
@@ -740,13 +751,15 @@ public class Parser {
 
             case NEW:
                 scan();
+
                 if (kind == IDENT) {
                     symbol = symbolTable.find(token.text);
                     if (symbol == null) {
                         error(token.text + " not in scope");
-                        symbol = new Symbol(token);
+                        symbol = new Symbol();
                     } else if (symbol.symbolKind != SymbolKind.TYPE) {
                         error(token.text + " is not a type");
+                        symbol = new Symbol();
                     }
                 }
 
@@ -755,7 +768,7 @@ public class Parser {
                 if (kind == LBRACK) {
                     scan();
 
-                    Operand arraySize = expression(); // Will load the index to CodeBuffer
+                    Operand arraySize = expression(); // Will load the size to CodeBuffer
                     if (arraySize.type.typeKind != TypeKind.INT) {
                         error("Expression of type " + TypeKind.INT + " expected");
                     }
@@ -765,14 +778,17 @@ public class Parser {
 
                     symbol = symbolTable.find(symbol.symbolType.name + "[]");
 
-                    operand = new Operand(symbol);
+                    if (symbol == null) {
+                        symbol = new Symbol();
+                    }
 
                     check(RBRACK);
                 } else {
                     CodeBuffer.putByte(Instruction.NEW);
                     CodeBuffer.putByte(symbol.symbolType.fields.size());
-                    operand = new Operand(symbol);
                 }
+
+                operand = new Operand(symbol);
 
                 break;
 

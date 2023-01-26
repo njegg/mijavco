@@ -52,6 +52,8 @@ public class Mijavco {
             }
         }));
 
+        File outputFile = CodeBuffer.createObjectFile();
+
         if (printInstructionsFlag) {
             CodeBuffer.printCode();
             System.out.println();
@@ -61,8 +63,6 @@ public class Mijavco {
             System.out.print("Dump: ");
             CodeBuffer.dump();
         }
-
-        File outputFile = CodeBuffer.createObjectFile();
 
         if (runFlag) {
             MijaVM.runFromFile(outputFile.getName());

@@ -1,0 +1,14 @@
+program P
+{
+	void main()
+		char[] s;
+		char c;
+		int i;
+	{
+		s = "hello Borld";
+		s[6] = 'W';
+		s[0] = 'H';
+
+		print(s);
+	}
+}

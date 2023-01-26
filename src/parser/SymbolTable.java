@@ -48,6 +48,13 @@ public class SymbolTable {
         closeScope();
         ctoi.address = -1;
 
+        Symbol rand = insert("rand", SymbolKind.FUNCTION, new Type(TypeKind.INT), null);
+        openScope(rand);
+        rand.parameters = new LinkedList<>();
+        rand.parameters.addLast(insert("max", SymbolKind.VAR, new Type(TypeKind.INT), null));
+        closeScope();
+        rand.address = -1;
+
         Symbol itoc = insert("itoc", SymbolKind.FUNCTION, new Type(TypeKind.CHAR), null);
         openScope(itoc);
         itoc.parameters = new LinkedList<>();

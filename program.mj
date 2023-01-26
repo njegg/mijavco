@@ -1,14 +1,53 @@
 program P
-{
-	void main()
-		char[] s;
-		char c;
-		int i;
-	{
-		s = "hello Borld";
-		s[6] = 'W';
-		s[0] = 'H';
+	const int size = 4;
 
-		print(s);
+	struct Node
+	{
+		int val;
+		Node next;
+	}
+
+	Node[] lists;
+{
+
+	Node insert(Node root, int val)
+		Node n;
+	{
+		n = new Node;
+		n.next = root;
+		n.val = val;
+		return n;
+	}
+
+	void print_list(Node root)
+    {
+        if (root == null) return;
+
+        print(root.val);
+        print(' ');
+
+        print_list(root.next);
+	}
+
+	void main()
+		int i, j;
+		Node root;
+	{
+		lists = new Node[size];
+		lists[2] = new Node;
+		lists[2].val = 32;
+		print(lists[2].val); print('\n');
+
+		print(len(lists)); print('\n');
+
+        root = null;
+        i = 0;
+        while (i < 10) {
+            root = insert(root, rand(100));
+            i++;
+        }
+
+        lists[1] = root;
+        print_list(lists[1]);
 	}
 }

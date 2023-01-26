@@ -141,11 +141,11 @@ public class CodeBuffer {
     }
 
     public static int getShort(int address) {
-        return (buffer[address] << 8) | buffer[address + 1];
+        return (buffer[address] << 8) & 0xff00 | (buffer[address + 1] & 0xff);
     }
 
     public static int getWord(int address) {
-        return (getShort(address) << 16) | getShort(address + 2);
+        return (getShort(address) << 16) & 0xffff0000 | (getShort(address + 2) & 0xffff);
     }
 
     public static byte[] getBuffer() { return buffer; }

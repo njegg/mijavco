@@ -64,6 +64,7 @@ public enum Instruction {
     BPRINT("bprint", 1),           // 60
     LOAD_STRING("load_string", 5), // 61
     TRAP("trap", 2),               // 62
+    RAND("rand", 1),               // 62
     PRINTS("prints", 1);           // 63
 
     Instruction(String niceName, int size) {

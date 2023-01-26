@@ -18,6 +18,11 @@ public class Operand {
     public int address;
 
     public Operand(Symbol symbol) {
+
+        if (symbol == null) {
+            return;
+        }
+
         type = symbol.symbolType;
         value = symbol.value;
         address = symbol.address;
