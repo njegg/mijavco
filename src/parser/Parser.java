@@ -731,7 +731,8 @@ public class Parser {
 
             case NUMBER:
                 symbol.symbolType = new Type(TypeKind.INT);
-                symbol.value = token.value * (prevToken.kind == MINUS ? -1 : 1);
+//                symbol.value = token.value * (prevToken.kind == MINUS ? -1 : 1);
+                symbol.value = token.value;
                 symbol.symbolKind = SymbolKind.CONST;
                 operand = new Operand(symbol);
                 scan();
@@ -793,9 +794,8 @@ public class Parser {
                 break;
 
             case LPAREN:
-                // TODO
                 scan();
-                expression();
+                operand = expression();
                 check(RPAREN);
                 break;
 
@@ -838,7 +838,11 @@ public class Parser {
     }
 
     private static Operand expression() {
-        if (kind == MINUS) scan();
+        boolean negate = false;
+        if (kind == MINUS) {
+            negate = true;
+            scan();
+        }
 
         Operand term1 = term();
         Operand termN;
@@ -862,6 +866,8 @@ public class Parser {
                 error("Cannot do arithmetic operations on '" + termN.symbol + "'");
             }
         }
+
+        if (negate) CodeBuffer.putByte(Instruction.NEG);
 
         return term1;
     }

@@ -412,6 +412,10 @@ public class MijaVM {
                     epush(rand.nextInt(epop()));
                     break;
 
+                case NEG:
+                    epush(-epop());
+                    break;
+
                 case TRAP:
                     Error.exit(Error.values()[getByte()], pc, instruction.niceName);
                     break;
