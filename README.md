@@ -18,15 +18,15 @@ program P
 {
     int one() { return 1; }
 
-	void main()
-		int i;
-	{
-		i = 0;
-		while (i < 5) {
-			print(i);
-			i = i + one();
-		}
+    void main()
+	int i;
+    {
+        i = 0;
+        while (i < 5) {
+            print(i);
+            i = i + one();
 	}
+    }
 }
 ```
 it will generate bytecode and dump it in a file. It can also print the instructions
