@@ -1,6 +1,6 @@
 # mijavco
  
-> Work in progress compiler and virtual machine for a simple C/MicroJava like language
+> Compiler and a virtual machine for a simple C/MicroJava like language
 
 MicroJava is a simple language made by H. Mössenböck
 for a Compiler Construction course whose materials were used in
